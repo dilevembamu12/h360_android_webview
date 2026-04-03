@@ -17,7 +17,22 @@
         android:showAsAction="never" />
 
     <item
+        android:id="@+id/action_export_pdf"
+        android:title="@string/action_export_pdf"
+        android:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_share_pdf"
+        android:title="@string/action_share_pdf"
+        android:showAsAction="never" />
+
+    <item
         android:id="@+id/action_new_sale"
         android:title="@string/shortcut_new_sale"
+        android:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_pos"
+        android:title="@string/shortcut_pos"
         android:showAsAction="never" />
 </menu>

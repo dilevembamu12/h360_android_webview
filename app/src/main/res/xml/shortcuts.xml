@@ -15,6 +15,58 @@
     </shortcut>
 
     <shortcut
+        android:shortcutId="new-sale"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_new_sale"
+        android:shortcutLongLabel="@string/shortcut_new_sale_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="cd.h360.pos"
+            android:targetClass="cd.h360.pos.MainActivity"
+            android:data="h360://shortcut/new-sale" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="pos"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_pos"
+        android:shortcutLongLabel="@string/shortcut_pos_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="cd.h360.pos"
+            android:targetClass="cd.h360.pos.MainActivity"
+            android:data="h360://shortcut/pos" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="sales-history"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_sales_history"
+        android:shortcutLongLabel="@string/shortcut_sales_history_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="cd.h360.pos"
+            android:targetClass="cd.h360.pos.MainActivity"
+            android:data="h360://shortcut/sales-history" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="stock-mismatch"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_stock_mismatch"
+        android:shortcutLongLabel="@string/shortcut_stock_mismatch_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="cd.h360.pos"
+            android:targetClass="cd.h360.pos.MainActivity"
+            android:data="h360://shortcut/stock-mismatch" />
+    </shortcut>
+
+    <shortcut
         android:shortcutId="offline"
         android:enabled="true"
         android:icon="@mipmap/ic_launcher"

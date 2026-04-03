@@ -23,11 +23,12 @@ object DeepLinkResolver {
     private fun shortcutToUrl(shortcut: String, homeUrl: String): String {
         val appOrigin = Uri.parse(homeUrl).let { "${it.scheme}://${it.host}" }
         return when (shortcut) {
-            "copilot" -> "$appOrigin/h360copilot"
+            "copilot" -> "$appOrigin/h360-copilot/chat"
             "offline" -> "$appOrigin/h360offline"
-            "new-sale" -> "$appOrigin/pos/create"
-            "sales-history" -> "$appOrigin/sell"
-            "stock-mismatch" -> "$appOrigin/reports/stock-report?type=mismatch"
+            "new-sale" -> "$appOrigin/sells/create"
+            "pos" -> "$appOrigin/pos/create"
+            "sales-history" -> "$appOrigin/sells"
+            "stock-mismatch" -> "$appOrigin/reports/product-stock-details"
             "customers" -> "$appOrigin/contacts?type=customer"
             else -> homeUrl
         }

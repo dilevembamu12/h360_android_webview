@@ -9,11 +9,16 @@ import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.CancellationSignal
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.ParcelFileDescriptor
 import android.view.View
 import android.print.PrintAttributes
+import android.print.PrintDocumentAdapter
+import android.print.PrintDocumentInfo
+import android.print.PageRange
 import android.print.PrintManager
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -29,10 +34,13 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import cd.h360.pos.databinding.ActivityMainBinding
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import android.widget.Toast
 
 class MainActivity : AppCompatActivity() {
 
@@ -60,6 +68,12 @@ class MainActivity : AppCompatActivity() {
     private val maintenanceCheckUrl = BuildConfig.MAINTENANCE_CHECK_URL
     private val kioskModeEnabled = BuildConfig.ENABLE_KIOSK_MODE
     private val appOrigin = Uri.parse(homeUrl).let { "${it.scheme}://${it.host}" }
+    private val copilotUrl = "$appOrigin/h360-copilot/chat"
+    private val offlineUrl = "$appOrigin/h360offline"
+    private val newSaleUrl = "$appOrigin/sells/create"
+    private val posUrl = "$appOrigin/pos/create"
+    private val salesHistoryUrl = "$appOrigin/sells"
+    private val stockMismatchUrl = "$appOrigin/reports/product-stock-details"
 
     private val allowedHosts = BuildConfig.ALLOWED_INTERNAL_HOSTS
         .split(",")
@@ -120,15 +134,27 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.action_copilot -> {
-                    binding.webView.loadUrl("$appOrigin/h360copilot")
+                    binding.webView.loadUrl(copilotUrl)
                     true
                 }
                 R.id.action_offline -> {
-                    binding.webView.loadUrl("$appOrigin/h360offline")
+                    binding.webView.loadUrl(offlineUrl)
                     true
                 }
                 R.id.action_new_sale -> {
-                    binding.webView.loadUrl("$appOrigin/pos/create")
+                    binding.webView.loadUrl(newSaleUrl)
+                    true
+                }
+                R.id.action_pos -> {
+                    binding.webView.loadUrl(posUrl)
+                    true
+                }
+                R.id.action_export_pdf -> {
+                    exportCurrentPageAsPdf(shareAfterExport = false)
+                    true
+                }
+                R.id.action_share_pdf -> {
+                    exportCurrentPageAsPdf(shareAfterExport = true)
                     true
                 }
                 else -> false
@@ -340,6 +366,12 @@ class MainActivity : AppCompatActivity() {
         binding.webView.loadUrl(target)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        checkMaintenanceAndLoad(forceReload = true)
+    }
+
     private fun showMaintenanceOverlay() {
         binding.maintenanceContainer.visibility = View.VISIBLE
         binding.swipeRefresh.isEnabled = false
@@ -371,6 +403,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun printCurrentPage() {
+        if (binding.webView.url.isNullOrBlank()) {
+            Toast.makeText(this, getString(R.string.pdf_export_failed), Toast.LENGTH_SHORT).show()
+            return
+        }
         val printManager = getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return
         val adapter = binding.webView.createPrintDocumentAdapter("h360-invoice")
         printManager.print(
@@ -378,6 +414,105 @@ class MainActivity : AppCompatActivity() {
             adapter,
             PrintAttributes.Builder().build()
         )
+    }
+
+    private fun exportCurrentPageAsPdf(shareAfterExport: Boolean) {
+        if (binding.webView.url.isNullOrBlank()) {
+            Toast.makeText(this, getString(R.string.pdf_export_failed), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val fileName = "h360-invoice-${System.currentTimeMillis()}.pdf"
+        val outputDir = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "invoices")
+        if (!outputDir.exists()) {
+            outputDir.mkdirs()
+        }
+        val outputFile = File(outputDir, fileName)
+        val adapter = binding.webView.createPrintDocumentAdapter(fileName)
+        val attributes = PrintAttributes.Builder()
+            .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+            .setResolution(PrintAttributes.Resolution("pdf", "pdf", 300, 300))
+            .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+            .build()
+
+        adapter.onStart()
+        adapter.onLayout(
+            null,
+            attributes,
+            CancellationSignal(),
+            object : PrintDocumentAdapter.LayoutResultCallback() {
+                override fun onLayoutFinished(info: PrintDocumentInfo?, changed: Boolean) {
+                    writePdfFile(adapter, outputFile, shareAfterExport)
+                }
+
+                override fun onLayoutFailed(error: CharSequence?) {
+                    adapter.onFinish()
+                    Toast.makeText(
+                        this@MainActivity,
+                        error?.toString() ?: getString(R.string.pdf_export_failed),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            },
+            null
+        )
+    }
+
+    private fun writePdfFile(adapter: PrintDocumentAdapter, outputFile: File, shareAfterExport: Boolean) {
+        val pfd = runCatching {
+            ParcelFileDescriptor.open(
+                outputFile,
+                ParcelFileDescriptor.MODE_READ_WRITE or
+                    ParcelFileDescriptor.MODE_CREATE or
+                    ParcelFileDescriptor.MODE_TRUNCATE
+            )
+        }.getOrNull()
+
+        if (pfd == null) {
+            adapter.onFinish()
+            Toast.makeText(this, getString(R.string.pdf_export_failed), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        adapter.onWrite(
+            arrayOf(PageRange.ALL_PAGES),
+            pfd,
+            CancellationSignal(),
+            object : PrintDocumentAdapter.WriteResultCallback() {
+                override fun onWriteFinished(pages: Array<PageRange>) {
+                    runCatching { pfd.close() }
+                    adapter.onFinish()
+                    if (shareAfterExport) {
+                        sharePdfFile(outputFile)
+                    } else {
+                        Toast.makeText(
+                            this@MainActivity,
+                            getString(R.string.pdf_export_success, outputFile.name),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+
+                override fun onWriteFailed(error: CharSequence?) {
+                    runCatching { pfd.close() }
+                    adapter.onFinish()
+                    Toast.makeText(
+                        this@MainActivity,
+                        error?.toString() ?: getString(R.string.pdf_export_failed),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        )
+    }
+
+    private fun sharePdfFile(file: File) {
+        val uri = FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.pdf_share_title)))
     }
 
     private fun inferRoleFromUrl(url: String): String? {
