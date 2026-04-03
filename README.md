@@ -1,4 +1,4 @@
-﻿# H360 POS Android WebView (MVP)
+# H360 POS Android WebView (MVP)
 
 Application Android WebView pour accéder à H360 POS sans taper l’URL dans un navigateur.
 

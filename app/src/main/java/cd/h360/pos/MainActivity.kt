@@ -1,4 +1,4 @@
-﻿package cd.h360.pos
+package cd.h360.pos
 
 import android.Manifest
 import android.annotation.SuppressLint

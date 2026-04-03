@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">H360 POS</string>
     <string name="splash_subtitle">Chargement sécurisé…</string>
     <string name="offline_message">Connexion faible ou indisponible. Vérifiez Internet puis réessayez.</string>
