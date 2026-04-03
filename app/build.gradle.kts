@@ -48,6 +48,9 @@ android {
     }
 
     buildFeatures {
+        // H360-CUSTOM-PATCH [H360_ANDROID_WEBVIEW_BUILD]
+        // Required because we define custom buildConfigField entries.
+        buildConfig = true
         viewBinding = true
     }
 }
