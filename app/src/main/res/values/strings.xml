@@ -1,0 +1,9 @@
+﻿<resources>
+    <string name="app_name">H360 POS</string>
+    <string name="splash_subtitle">Chargement sécurisé…</string>
+    <string name="offline_message">Connexion faible ou indisponible. Vérifiez Internet puis réessayez.</string>
+    <string name="download_in_progress">Téléchargement en cours...</string>
+    <string name="maintenance_title">Maintenance en cours</string>
+    <string name="maintenance_message">Le service est momentanément indisponible. Réessayez dans un instant.</string>
+    <string name="retry">Réessayer</string>
+</resources>
