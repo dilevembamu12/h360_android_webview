@@ -158,7 +158,7 @@ class MainActivity : AppCompatActivity() {
             webView.reload()
         }
 
-        webView.downloadListener = DownloadListener { url, userAgent, _, mimeType, _ ->
+        webView.setDownloadListener(DownloadListener { url, userAgent, _, mimeType, _ ->
             val request = DownloadManager.Request(Uri.parse(url))
             request.setMimeType(mimeType)
             request.addRequestHeader("User-Agent", userAgent)
@@ -169,7 +169,7 @@ class MainActivity : AppCompatActivity() {
 
             val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
-        }
+        })
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
