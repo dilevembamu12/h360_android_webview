@@ -1,9 +1,24 @@
 <resources>
     <string name="app_name">H360 POS</string>
-    <string name="splash_subtitle">Chargement sécurisé…</string>
-    <string name="offline_message">Connexion faible ou indisponible. Vérifiez Internet puis réessayez.</string>
-    <string name="download_in_progress">Téléchargement en cours...</string>
+    <string name="splash_subtitle">Chargement securise...</string>
+    <string name="offline_message">Connexion faible ou indisponible. Verifiez Internet puis reessayez.</string>
+    <string name="download_in_progress">Telechargement en cours...</string>
     <string name="maintenance_title">Maintenance en cours</string>
-    <string name="maintenance_message">Le service est momentanément indisponible. Réessayez dans un instant.</string>
-    <string name="retry">Réessayer</string>
+    <string name="maintenance_message">Le service est momentanement indisponible. Reessayez dans un instant.</string>
+    <string name="retry">Reessayer</string>
+    <string name="action_print_invoice">Imprimer facture</string>
+    <string name="shortcut_copilot">Copilot</string>
+    <string name="shortcut_copilot_long">Ouvrir H360 Copilot</string>
+    <string name="shortcut_offline">Offline</string>
+    <string name="shortcut_offline_long">Ouvrir H360 Offline</string>
+    <string name="shortcut_new_sale">Nouvelle vente</string>
+    <string name="shortcut_new_sale_long">Ouvrir l ecran de vente</string>
+    <string name="shortcut_sales_history">Historique ventes</string>
+    <string name="shortcut_sales_history_long">Ouvrir l historique des ventes</string>
+    <string name="shortcut_stock_mismatch">Stock mismatch</string>
+    <string name="shortcut_stock_mismatch_long">Voir les ecarts de stock</string>
+    <string name="shortcut_customers">Clients</string>
+    <string name="shortcut_customers_long">Ouvrir la liste clients</string>
+    <string name="widget_title">H360 POS Status</string>
+    <string name="widget_unknown">N/A</string>
 </resources>

@@ -15,6 +15,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.H360POS"
         android:usesCleartextTraffic="false">
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
 
         <activity
             android:name=".SplashActivity"
@@ -39,7 +42,24 @@
                 <data android:scheme="https" android:host="pos.h360.cd" />
                 <data android:scheme="https" android:host="stack.git.h360.cd" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="h360" android:host="shortcut" />
+            </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".H360WidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/h360_status_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

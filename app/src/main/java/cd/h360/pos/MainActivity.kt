@@ -13,8 +13,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.View
+import android.print.PrintAttributes
+import android.print.PrintManager
 import android.webkit.CookieManager
-import android.webkit.DownloadListener
+import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -57,12 +59,31 @@ class MainActivity : AppCompatActivity() {
     private val homeUrl = BuildConfig.WEBVIEW_BASE_URL
     private val maintenanceCheckUrl = BuildConfig.MAINTENANCE_CHECK_URL
     private val kioskModeEnabled = BuildConfig.ENABLE_KIOSK_MODE
+    private val appOrigin = Uri.parse(homeUrl).let { "${it.scheme}://${it.host}" }
 
     private val allowedHosts = BuildConfig.ALLOWED_INTERNAL_HOSTS
         .split(",")
         .map { it.trim().lowercase() }
         .filter { it.isNotEmpty() }
         .toSet()
+
+    private val bridge by lazy {
+        H360JsBridge(
+            onRole = { role ->
+                saveRole(role)
+                AppShortcutsManager.updateForRole(this, role)
+                H360WidgetUpdater.refreshAllWidgets(this)
+            },
+            onOfflinePending = { count ->
+                saveOfflinePending(count)
+                H360WidgetUpdater.refreshAllWidgets(this)
+            },
+            onLastSync = { lastSync ->
+                saveLastSync(lastSync)
+                H360WidgetUpdater.refreshAllWidgets(this)
+            }
+        )
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +97,8 @@ class MainActivity : AppCompatActivity() {
         setupMaintenanceActions()
         requestNotificationPermissionIfNeeded()
         enableKioskModeIfConfigured()
+        AppShortcutsManager.updateForRole(this, readRole())
+        H360WidgetUpdater.refreshAllWidgets(this)
         checkMaintenanceAndLoad()
     }
 
@@ -87,6 +110,28 @@ class MainActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener {
             if (binding.webView.canGoBack()) {
                 binding.webView.goBack()
+            }
+        }
+        binding.toolbar.inflateMenu(R.menu.main_actions)
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_print_invoice -> {
+                    printCurrentPage()
+                    true
+                }
+                R.id.action_copilot -> {
+                    binding.webView.loadUrl("$appOrigin/h360copilot")
+                    true
+                }
+                R.id.action_offline -> {
+                    binding.webView.loadUrl("$appOrigin/h360offline")
+                    true
+                }
+                R.id.action_new_sale -> {
+                    binding.webView.loadUrl("$appOrigin/pos/create")
+                    true
+                }
+                else -> false
             }
         }
     }
@@ -150,15 +195,17 @@ class MainActivity : AppCompatActivity() {
         settings.loadWithOverviewMode = true
         settings.setSupportMultipleWindows(false)
         settings.mediaPlaybackRequiresUserGesture = false
+        webView.setInitialScale(80)
 
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
+        webView.addJavascriptInterface(bridge, "H360Native")
 
         binding.swipeRefresh.setOnRefreshListener {
             webView.reload()
         }
 
-        webView.setDownloadListener(DownloadListener { url, userAgent, _, mimeType, _ ->
+        webView.setDownloadListener { url, userAgent, _, mimeType, _ ->
             val request = DownloadManager.Request(Uri.parse(url))
             request.setMimeType(mimeType)
             request.addRequestHeader("User-Agent", userAgent)
@@ -169,7 +216,7 @@ class MainActivity : AppCompatActivity() {
 
             val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
-        })
+        }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
@@ -220,6 +267,14 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 binding.swipeRefresh.isRefreshing = false
                 binding.offlineBanner.visibility = if (isOnline()) View.GONE else View.VISIBLE
+                if (!url.isNullOrBlank()) {
+                    val inferredRole = inferRoleFromUrl(url)
+                    if (inferredRole != null && inferredRole != readRole()) {
+                        saveRole(inferredRole)
+                        AppShortcutsManager.updateForRole(this@MainActivity, inferredRole)
+                        H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
+                    }
+                }
                 super.onPageFinished(view, url)
             }
 
@@ -281,12 +336,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadTargetUrl() {
-        val deepLink = intent?.data
-        val target = if (deepLink != null && allowedHosts.contains(deepLink.host?.lowercase().orEmpty())) {
-            deepLink.toString()
-        } else {
-            homeUrl
-        }
+        val target = DeepLinkResolver.resolve(intent, homeUrl, allowedHosts)
         binding.webView.loadUrl(target)
     }
 
@@ -318,5 +368,81 @@ class MainActivity : AppCompatActivity() {
         filePathCallback = null
         bgExecutor.shutdownNow()
         super.onDestroy()
+    }
+
+    private fun printCurrentPage() {
+        val printManager = getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return
+        val adapter = binding.webView.createPrintDocumentAdapter("h360-invoice")
+        printManager.print(
+            "H360 Invoice",
+            adapter,
+            PrintAttributes.Builder().build()
+        )
+    }
+
+    private fun inferRoleFromUrl(url: String): String? {
+        val normalized = url.lowercase()
+        return when {
+            normalized.contains("/superadmin") -> "admin"
+            normalized.contains("/user-management") -> "admin"
+            normalized.contains("/pos/") -> "cashier"
+            normalized.contains("/stock") || normalized.contains("/product") -> "storekeeper"
+            else -> null
+        }
+    }
+
+    private fun readRole(): String {
+        val prefs = getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(H360WidgetUpdater.KEY_ROLE, "guest") ?: "guest"
+    }
+
+    private fun saveRole(role: String) {
+        getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(H360WidgetUpdater.KEY_ROLE, role)
+            .apply()
+    }
+
+    private fun saveOfflinePending(count: Int) {
+        getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(H360WidgetUpdater.KEY_OFFLINE_PENDING, count)
+            .apply()
+    }
+
+    private fun saveLastSync(lastSync: String) {
+        getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(H360WidgetUpdater.KEY_LAST_SYNC, lastSync)
+            .apply()
+    }
+}
+
+private class H360JsBridge(
+    private val onRole: (String) -> Unit,
+    private val onOfflinePending: (Int) -> Unit,
+    private val onLastSync: (String) -> Unit
+) {
+    @JavascriptInterface
+    fun setRole(role: String?) {
+        val safeRole = role?.trim()?.lowercase().orEmpty()
+        if (safeRole.isNotBlank()) {
+            onRole(safeRole)
+        }
+    }
+
+    @JavascriptInterface
+    fun setOfflinePendingCount(count: Int) {
+        if (count >= 0) {
+            onOfflinePending(count)
+        }
+    }
+
+    @JavascriptInterface
+    fun setLastSync(lastSync: String?) {
+        val safeLastSync = lastSync?.trim().orEmpty()
+        if (safeLastSync.isNotBlank()) {
+            onLastSync(safeLastSync)
+        }
     }
 }

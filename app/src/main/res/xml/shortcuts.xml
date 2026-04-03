@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="copilot"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_copilot"
+        android:shortcutLongLabel="@string/shortcut_copilot_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="cd.h360.pos"
+            android:targetClass="cd.h360.pos.MainActivity"
+            android:data="h360://shortcut/copilot" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="offline"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_offline"
+        android:shortcutLongLabel="@string/shortcut_offline_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="cd.h360.pos"
+            android:targetClass="cd.h360.pos.MainActivity"
+            android:data="h360://shortcut/offline" />
+    </shortcut>
+</shortcuts>

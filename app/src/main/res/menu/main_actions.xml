@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_copilot"
+        android:title="@string/shortcut_copilot"
+        android:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_offline"
+        android:title="@string/shortcut_offline"
+        android:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_print_invoice"
+        android:title="@string/action_print_invoice"
+        android:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_new_sale"
+        android:title="@string/shortcut_new_sale"
+        android:showAsAction="never" />
+</menu>
