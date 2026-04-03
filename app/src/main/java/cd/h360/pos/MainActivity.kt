@@ -39,6 +39,9 @@ import cd.h360.pos.databinding.ActivityMainBinding
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.Executors
 import android.widget.Toast
 
@@ -72,8 +75,6 @@ class MainActivity : AppCompatActivity() {
     private val offlineUrl = "$appOrigin/h360offline"
     private val newSaleUrl = "$appOrigin/sells/create"
     private val posUrl = "$appOrigin/pos/create"
-    private val salesHistoryUrl = "$appOrigin/sells"
-    private val stockMismatchUrl = "$appOrigin/reports/product-stock-details"
 
     private val allowedHosts = BuildConfig.ALLOWED_INTERNAL_HOSTS
         .split(",")
@@ -84,16 +85,16 @@ class MainActivity : AppCompatActivity() {
     private val bridge by lazy {
         H360JsBridge(
             onRole = { role ->
-                saveRole(role)
+                H360WidgetUpdater.rememberRole(this, role)
                 AppShortcutsManager.updateForRole(this, role)
                 H360WidgetUpdater.refreshAllWidgets(this)
             },
             onOfflinePending = { count ->
-                saveOfflinePending(count)
+                H360WidgetUpdater.rememberOfflinePending(this, count)
                 H360WidgetUpdater.refreshAllWidgets(this)
             },
             onLastSync = { lastSync ->
-                saveLastSync(lastSync)
+                H360WidgetUpdater.rememberLastSync(this, lastSync)
                 H360WidgetUpdater.refreshAllWidgets(this)
             }
         )
@@ -111,6 +112,9 @@ class MainActivity : AppCompatActivity() {
         setupMaintenanceActions()
         requestNotificationPermissionIfNeeded()
         enableKioskModeIfConfigured()
+        H360WidgetUpdater.incrementAppOpens(this)
+        H360WidgetUpdater.rememberOnline(this, isOnline())
+        H360WidgetUpdater.rememberLastUpdate(this, nowStamp())
         AppShortcutsManager.updateForRole(this, readRole())
         H360WidgetUpdater.refreshAllWidgets(this)
         checkMaintenanceAndLoad()
@@ -292,15 +296,19 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 binding.swipeRefresh.isRefreshing = false
-                binding.offlineBanner.visibility = if (isOnline()) View.GONE else View.VISIBLE
+                val online = isOnline()
+                binding.offlineBanner.visibility = if (online) View.GONE else View.VISIBLE
+                H360WidgetUpdater.rememberOnline(this@MainActivity, online)
+                H360WidgetUpdater.rememberLastUpdate(this@MainActivity, nowStamp())
                 if (!url.isNullOrBlank()) {
+                    H360WidgetUpdater.rememberLastPage(this@MainActivity, sanitizePath(url))
                     val inferredRole = inferRoleFromUrl(url)
                     if (inferredRole != null && inferredRole != readRole()) {
-                        saveRole(inferredRole)
+                        H360WidgetUpdater.rememberRole(this@MainActivity, inferredRole)
                         AppShortcutsManager.updateForRole(this@MainActivity, inferredRole)
-                        H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
                     }
                 }
+                H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
                 super.onPageFinished(view, url)
             }
 
@@ -311,6 +319,9 @@ class MainActivity : AppCompatActivity() {
             ) {
                 if (request?.isForMainFrame == true) {
                     binding.offlineBanner.visibility = View.VISIBLE
+                    H360WidgetUpdater.rememberOnline(this@MainActivity, false)
+                    H360WidgetUpdater.rememberLastUpdate(this@MainActivity, nowStamp())
+                    H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
                 }
                 super.onReceivedError(view, request, error)
             }
@@ -331,6 +342,9 @@ class MainActivity : AppCompatActivity() {
     private fun checkMaintenanceAndLoad(forceReload: Boolean = false) {
         if (!isOnline()) {
             binding.offlineBanner.visibility = View.VISIBLE
+            H360WidgetUpdater.rememberOnline(this, false)
+            H360WidgetUpdater.rememberLastUpdate(this, nowStamp())
+            H360WidgetUpdater.refreshAllWidgets(this)
             hideMaintenanceOverlay()
             if (forceReload) {
                 loadTargetUrl()
@@ -352,6 +366,9 @@ class MainActivity : AppCompatActivity() {
                 if (statusCode == 503) {
                     showMaintenanceOverlay()
                 } else {
+                    H360WidgetUpdater.rememberOnline(this@MainActivity, true)
+                    H360WidgetUpdater.rememberLastUpdate(this@MainActivity, nowStamp())
+                    H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
                     hideMaintenanceOverlay()
                     if (forceReload || binding.webView.url.isNullOrBlank()) {
                         loadTargetUrl()
@@ -531,25 +548,16 @@ class MainActivity : AppCompatActivity() {
         return prefs.getString(H360WidgetUpdater.KEY_ROLE, "guest") ?: "guest"
     }
 
-    private fun saveRole(role: String) {
-        getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(H360WidgetUpdater.KEY_ROLE, role)
-            .apply()
+    private fun sanitizePath(url: String): String {
+        return runCatching {
+            val uri = Uri.parse(url)
+            val path = uri.path.orEmpty().ifBlank { "/" }
+            if (!uri.query.isNullOrBlank()) "$path?${uri.query}" else path
+        }.getOrDefault(url)
     }
 
-    private fun saveOfflinePending(count: Int) {
-        getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(H360WidgetUpdater.KEY_OFFLINE_PENDING, count)
-            .apply()
-    }
-
-    private fun saveLastSync(lastSync: String) {
-        getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(H360WidgetUpdater.KEY_LAST_SYNC, lastSync)
-            .apply()
+    private fun nowStamp(): String {
+        return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
     }
 }
 

@@ -28,4 +28,12 @@
     <string name="shortcut_customers_long">Ouvrir la liste clients</string>
     <string name="widget_title">H360 POS Status</string>
     <string name="widget_unknown">N/A</string>
+    <string name="widget_not_synced">Non synchronise</string>
+    <string name="widget_not_available">Mise a jour en attente</string>
+    <string name="widget_page_unknown">Page inconnue</string>
+    <string name="widget_stat_role">ROLE</string>
+    <string name="widget_stat_pending">OFFLINE PENDING</string>
+    <string name="widget_stat_open_count">SESSIONS</string>
+    <string name="widget_stat_last_sync">LAST SYNC</string>
+    <string name="widget_stat_last_page">DERNIERE PAGE</string>
 </resources>
