@@ -42,6 +42,7 @@
     <string name="widget_stat_avg_ticket">PANIER MOYEN</string>
     <string name="widget_stat_low_stock">STOCK CRITIQUE</string>
     <string name="widget_stat_mismatch">STOCK MISMATCH</string>
+    <string name="currency_symbol">CDF</string>
     <string name="widget_customize">Personnaliser</string>
     <string name="widget_settings_title">Widgets H360</string>
     <string name="widget_settings_subtitle">Choisir les sections a afficher</string>

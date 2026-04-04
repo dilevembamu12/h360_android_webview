@@ -380,6 +380,8 @@ object H360WidgetUpdater {
         val avgTicket = prefs.getString(KEY_AVG_TICKET, "0") ?: "0"
         val lowStock = prefs.getInt(KEY_LOW_STOCK, 0)
         val stockMismatch = prefs.getInt(KEY_STOCK_MISMATCH, 0)
+        val salesTodayDisplay = formatMoneyDisplay(context, salesToday)
+        val avgTicketDisplay = formatMoneyDisplay(context, avgTicket)
 
         val views = RemoteViews(context.packageName, R.layout.widget_h360_status)
         views.setTextViewText(R.id.widgetRoleValue, role.uppercase())
@@ -389,9 +391,9 @@ object H360WidgetUpdater {
         views.setTextViewText(R.id.widgetOpenCountValue, appOpens.toString())
         views.setTextViewText(R.id.widgetLastPageValue, lastPage)
         views.setTextViewText(R.id.widgetLastUpdateValue, lastUpdate)
-        views.setTextViewText(R.id.widgetSalesTodayValue, salesToday)
+        views.setTextViewText(R.id.widgetSalesTodayValue, salesTodayDisplay)
         views.setTextViewText(R.id.widgetTicketsTodayValue, ticketsToday.toString())
-        views.setTextViewText(R.id.widgetAvgTicketValue, avgTicket)
+        views.setTextViewText(R.id.widgetAvgTicketValue, avgTicketDisplay)
         views.setTextViewText(R.id.widgetLowStockValue, lowStock.toString())
         views.setTextViewText(R.id.widgetMismatchValue, stockMismatch.toString())
         views.setTextColor(
@@ -481,6 +483,18 @@ object H360WidgetUpdater {
 
     private fun nowStamp(): String {
         return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+    }
+
+    fun formatMoneyDisplay(context: Context, raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return trimmed
+        if (trimmed == "--" || trimmed.contains("%")) return trimmed
+        val hasLetters = trimmed.any { it.isLetter() }
+        val hasCurrency = trimmed.any { it in "$€£¥₦₵₣₱₹" }
+        if (hasLetters || hasCurrency) return trimmed
+        val symbol = context.getString(R.string.currency_symbol).trim()
+        if (symbol.isEmpty()) return trimmed
+        return "$symbol $trimmed"
     }
 
     private data class InsightHttpResult(

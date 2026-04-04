@@ -75,13 +75,13 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                 )
 
                 val blocked = !hasSynced && syncState != "ok"
-                val safeSalesToday = if (blocked) "--" else salesToday
+                val safeSalesToday = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, salesToday)
                 val safeTicketsToday = if (blocked) "--" else ticketsToday.toString()
-                val safeAvgTicket = if (blocked) "--" else avgTicket
+                val safeAvgTicket = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, avgTicket)
                 val safeLowStock = if (blocked) "--" else lowStock.toString()
                 val safeMismatch = if (blocked) "--" else mismatch.toString()
-                val safeExpense = if (blocked) "--" else expense
-                val safeProfit = if (blocked) "--" else profit
+                val safeExpense = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, expense)
+                val safeProfit = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, profit)
                 val safeOverdue = if (blocked) "--" else overdue.toString()
                 val safeCollection = if (blocked) "--" else collection
                 val safeTrend = if (blocked) "--" else salesTrend
