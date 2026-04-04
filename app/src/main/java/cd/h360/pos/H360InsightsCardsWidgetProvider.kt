@@ -66,35 +66,35 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                     }
                 )
 
-                val (k1Label, k1Value, k2Label, k2Value, k3Label, k3Value, k4Label, k4Value) = when (cat) {
+                val kpis: List<Pair<String, String>> = when (cat) {
                     CATEGORY_STOCK -> listOf(
-                        context.getString(R.string.insights_kpi_low_stock), lowStock.toString(),
-                        context.getString(R.string.insights_kpi_mismatch), mismatch.toString(),
-                        context.getString(R.string.insights_kpi_tickets), ticketsToday.toString(),
-                        context.getString(R.string.insights_kpi_sales_trend), salesTrend
+                        context.getString(R.string.insights_kpi_low_stock) to lowStock.toString(),
+                        context.getString(R.string.insights_kpi_mismatch) to mismatch.toString(),
+                        context.getString(R.string.insights_kpi_tickets) to ticketsToday.toString(),
+                        context.getString(R.string.insights_kpi_sales_trend) to salesTrend
                     )
                     CATEGORY_HEALTH -> listOf(
-                        context.getString(R.string.insights_kpi_profit), profit,
-                        context.getString(R.string.insights_kpi_expense), expense,
-                        context.getString(R.string.insights_kpi_overdue), overdue.toString(),
-                        context.getString(R.string.insights_kpi_collection), collection
+                        context.getString(R.string.insights_kpi_profit) to profit,
+                        context.getString(R.string.insights_kpi_expense) to expense,
+                        context.getString(R.string.insights_kpi_overdue) to overdue.toString(),
+                        context.getString(R.string.insights_kpi_collection) to collection
                     )
                     else -> listOf(
-                        context.getString(R.string.insights_kpi_sales_today), salesToday,
-                        context.getString(R.string.insights_kpi_tickets), ticketsToday.toString(),
-                        context.getString(R.string.insights_kpi_avg_ticket), avgTicket,
-                        context.getString(R.string.insights_kpi_sales_trend), salesTrend
+                        context.getString(R.string.insights_kpi_sales_today) to salesToday,
+                        context.getString(R.string.insights_kpi_tickets) to ticketsToday.toString(),
+                        context.getString(R.string.insights_kpi_avg_ticket) to avgTicket,
+                        context.getString(R.string.insights_kpi_sales_trend) to salesTrend
                     )
                 }
 
-                views.setTextViewText(R.id.card1Label, k1Label)
-                views.setTextViewText(R.id.card1Value, k1Value)
-                views.setTextViewText(R.id.card2Label, k2Label)
-                views.setTextViewText(R.id.card2Value, k2Value)
-                views.setTextViewText(R.id.card3Label, k3Label)
-                views.setTextViewText(R.id.card3Value, k3Value)
-                views.setTextViewText(R.id.card4Label, k4Label)
-                views.setTextViewText(R.id.card4Value, k4Value)
+                views.setTextViewText(R.id.card1Label, kpis[0].first)
+                views.setTextViewText(R.id.card1Value, kpis[0].second)
+                views.setTextViewText(R.id.card2Label, kpis[1].first)
+                views.setTextViewText(R.id.card2Value, kpis[1].second)
+                views.setTextViewText(R.id.card3Label, kpis[2].first)
+                views.setTextViewText(R.id.card3Value, kpis[2].second)
+                views.setTextViewText(R.id.card4Label, kpis[3].first)
+                views.setTextViewText(R.id.card4Value, kpis[3].second)
 
                 views.setInt(R.id.tabSales, "setBackgroundColor", if (cat == CATEGORY_SALES) 0xFF253B63.toInt() else 0xFF182743.toInt())
                 views.setInt(R.id.tabStock, "setBackgroundColor", if (cat == CATEGORY_STOCK) 0xFF253B63.toInt() else 0xFF182743.toInt())
