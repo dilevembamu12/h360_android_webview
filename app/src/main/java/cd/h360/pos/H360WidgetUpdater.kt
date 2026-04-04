@@ -42,6 +42,7 @@ object H360WidgetUpdater {
     const val KEY_PROFIT_TODAY = "profit_today"
     const val KEY_OVERDUE_INVOICES = "overdue_invoices"
     const val KEY_COLLECTION_RATE = "collection_rate"
+    const val KEY_CURRENCY_SYMBOL = "currency_symbol"
     const val KEY_LAST_REMOTE_FETCH_MS = "last_remote_fetch_ms"
     private const val KEY_REMOTE_REFRESH_INTERVAL_SEC = "remote_refresh_interval_sec"
     const val KEY_REMOTE_SYNC_STATE = "remote_sync_state"
@@ -140,6 +141,11 @@ object H360WidgetUpdater {
 
     fun rememberSalesTrend(context: Context, trend: String) {
         prefs(context).edit().putString(KEY_SALES_TREND, trend.ifBlank { "Stable" }).apply()
+    }
+
+    fun rememberCurrencySymbol(context: Context, symbol: String) {
+        if (symbol.isBlank()) return
+        prefs(context).edit().putString(KEY_CURRENCY_SYMBOL, symbol.trim()).apply()
     }
 
     fun refreshAllWidgets(context: Context) {
@@ -303,6 +309,15 @@ object H360WidgetUpdater {
         }
 
         val insights = json.optJSONObject("insights")
+        val currency = json.optJSONObject("currency")
+        val currencySymbol = when {
+            currency != null && currency.optString("symbol").isNotBlank() -> currency.optString("symbol")
+            json.optString("currency_symbol").isNotBlank() -> json.optString("currency_symbol")
+            else -> ""
+        }
+        if (currencySymbol.isNotBlank()) {
+            rememberCurrencySymbol(context, currencySymbol)
+        }
         val sales = insights?.optJSONObject("sales")
         if (sales != null) {
             rememberSalesInsights(
@@ -492,7 +507,8 @@ object H360WidgetUpdater {
         val hasLetters = trimmed.any { it.isLetter() }
         val hasCurrency = trimmed.any { it in "$€£¥₦₵₣₱₹" }
         if (hasLetters || hasCurrency) return trimmed
-        val symbol = context.getString(R.string.currency_symbol).trim()
+        val prefsSymbol = prefs(context).getString(KEY_CURRENCY_SYMBOL, "").orEmpty().trim()
+        val symbol = if (prefsSymbol.isNotBlank()) prefsSymbol else context.getString(R.string.currency_symbol).trim()
         if (symbol.isEmpty()) return trimmed
         return "$symbol $trimmed"
     }

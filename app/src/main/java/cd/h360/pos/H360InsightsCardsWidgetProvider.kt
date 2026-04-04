@@ -146,7 +146,14 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
         }
 
         private fun openInsightsPage(context: Context): PendingIntent {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("h360://shortcut/sales-history"), context, MainActivity::class.java).apply {
+            val base = BuildConfig.WEBVIEW_BASE_URL.trim().ifBlank { "https://pos.h360.cd" }
+            val normalized = if (base.endsWith("/")) base.dropLast(1) else base
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("$normalized/home"),
+                context,
+                MainActivity::class.java
+            ).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             return PendingIntent.getActivity(
