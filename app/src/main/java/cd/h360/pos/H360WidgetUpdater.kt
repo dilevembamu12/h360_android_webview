@@ -6,7 +6,16 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.webkit.CookieManager
 import android.widget.RemoteViews
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 object H360WidgetUpdater {
     const val PREFS_NAME = "h360_widget_prefs"
@@ -31,11 +40,16 @@ object H360WidgetUpdater {
     const val KEY_PROFIT_TODAY = "profit_today"
     const val KEY_OVERDUE_INVOICES = "overdue_invoices"
     const val KEY_COLLECTION_RATE = "collection_rate"
+    private const val KEY_LAST_REMOTE_FETCH_MS = "last_remote_fetch_ms"
+    private const val KEY_REMOTE_REFRESH_INTERVAL_SEC = "remote_refresh_interval_sec"
+    private const val DEFAULT_REMOTE_REFRESH_INTERVAL_SEC = 300
 
     private const val MODULE_SALES = "sales"
     private const val MODULE_STOCK = "stock"
     private const val MODULE_OFFLINE = "offline"
     private const val MODULE_ACTIVITY = "activity"
+    private val networkExecutor = Executors.newSingleThreadExecutor()
+    private val remoteFetchInProgress = AtomicBoolean(false)
 
     fun rememberRole(context: Context, role: String) {
         prefs(context).edit().putString(KEY_ROLE, role.ifBlank { "guest" }).apply()
@@ -125,6 +139,37 @@ object H360WidgetUpdater {
     }
 
     fun refreshAllWidgets(context: Context) {
+        refreshFromRemoteIfDue(context, force = false)
+        renderWidgets(context)
+    }
+
+    fun refreshFromRemoteIfDue(context: Context, force: Boolean) {
+        val appContext = context.applicationContext
+        val prefs = prefs(appContext)
+        val now = System.currentTimeMillis()
+        val lastFetch = prefs.getLong(KEY_LAST_REMOTE_FETCH_MS, 0L)
+        val intervalSec = prefs.getInt(KEY_REMOTE_REFRESH_INTERVAL_SEC, DEFAULT_REMOTE_REFRESH_INTERVAL_SEC)
+            .coerceIn(60, 3600)
+        val due = now - lastFetch >= intervalSec * 1000L
+        if (!force && !due) {
+            return
+        }
+        if (!remoteFetchInProgress.compareAndSet(false, true)) {
+            return
+        }
+
+        networkExecutor.execute {
+            try {
+                fetchAndStoreRemoteInsights(appContext)
+            } catch (_: Exception) {
+                // Keep local widget data as fallback when remote endpoint fails.
+            } finally {
+                remoteFetchInProgress.set(false)
+            }
+        }
+    }
+
+    private fun renderWidgets(context: Context) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val widgetComponent = ComponentName(context, H360WidgetProvider::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(widgetComponent)
@@ -136,6 +181,102 @@ object H360WidgetUpdater {
         }
         H360CopilotWidgetProvider.refreshAll(context)
         H360InsightsCardsWidgetProvider.refreshAll(context)
+    }
+
+    private fun fetchAndStoreRemoteInsights(context: Context) {
+        val url = BuildConfig.WIDGET_INSIGHTS_URL
+        if (url.isBlank()) return
+
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 6000
+            readTimeout = 6000
+            setRequestProperty("Accept", "application/json")
+        }
+
+        val cookie = CookieManager.getInstance().getCookie(url)
+        if (!cookie.isNullOrBlank()) {
+            conn.setRequestProperty("Cookie", cookie)
+        }
+
+        conn.inputStream.use { input ->
+            val body = input.bufferedReader().use { it.readText() }
+            if (conn.responseCode !in 200..299 || body.isBlank()) return
+            val json = JSONObject(body)
+            applyRemoteInsights(context, json)
+        }
+    }
+
+    private fun applyRemoteInsights(context: Context, json: JSONObject) {
+        val refreshSec = json.optInt("refresh_interval_sec", DEFAULT_REMOTE_REFRESH_INTERVAL_SEC).coerceIn(60, 3600)
+        val role = json.optString("role").ifBlank { "guest" }.lowercase()
+        rememberRole(context, role)
+
+        val permissions = json.optJSONObject("permissions")
+        val caps = mutableSetOf<String>()
+        if (permissions != null) {
+            if (permissions.optBoolean("can_sell", false)) caps.add("can_sell")
+            if (permissions.optBoolean("can_stock", false)) caps.add("can_view_stock")
+            if (permissions.optBoolean("can_copilot", false)) caps.add("can_use_copilot")
+            if (permissions.optBoolean("can_finance", false)) caps.add("can_view_finance")
+        }
+        if (caps.isNotEmpty()) {
+            rememberCapabilities(context, caps)
+        }
+
+        val modules = mutableSetOf<String>()
+        val modulesJson = json.optJSONArray("modules")
+        if (modulesJson != null) {
+            for (i in 0 until modulesJson.length()) {
+                val module = modulesJson.optString(i).trim().lowercase()
+                if (module.isNotBlank()) {
+                    modules.add(module)
+                }
+            }
+        }
+        if (modules.isNotEmpty()) {
+            rememberEnabledModules(context, modules)
+        }
+
+        val insights = json.optJSONObject("insights")
+        val sales = insights?.optJSONObject("sales")
+        if (sales != null) {
+            rememberSalesInsights(
+                context,
+                sales.optString("sales_today", "0"),
+                sales.optInt("tickets_today", 0),
+                sales.optString("avg_ticket", "0")
+            )
+            rememberSalesTrend(context, sales.optString("sales_trend", "Stable"))
+        }
+
+        val stock = insights?.optJSONObject("stock")
+        if (stock != null) {
+            rememberStockInsights(
+                context,
+                stock.optInt("low_stock", 0),
+                stock.optInt("mismatch", 0)
+            )
+        }
+
+        val health = insights?.optJSONObject("health")
+        if (health != null) {
+            rememberFinanceInsights(
+                context,
+                health.optString("expense_today", "0"),
+                health.optString("profit_today", "0"),
+                health.optInt("overdue_invoices", 0),
+                health.optString("collection_rate", "0%")
+            )
+        }
+
+        rememberLastUpdate(context, json.optString("generated_at").ifBlank { nowStamp() })
+        prefs(context).edit()
+            .putLong(KEY_LAST_REMOTE_FETCH_MS, System.currentTimeMillis())
+            .putInt(KEY_REMOTE_REFRESH_INTERVAL_SEC, refreshSec)
+            .apply()
+
+        renderWidgets(context)
     }
 
     private fun buildRemoteViews(context: Context): RemoteViews {
@@ -265,4 +406,8 @@ object H360WidgetUpdater {
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    private fun nowStamp(): String {
+        return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+    }
 }

@@ -23,6 +23,7 @@ android {
         buildConfigField("int", "SPLASH_DELAY_MS", "1200")
         buildConfigField("boolean", "ENABLE_KIOSK_MODE", "false")
         buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://pos.h360.cd/h360offline/ping\"")
+        buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://pos.h360.cd/h360/widgets/insights\"")
     }
 
     buildTypes {

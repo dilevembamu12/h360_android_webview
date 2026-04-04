@@ -21,7 +21,7 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
             ACTION_CATEGORY_SALES -> setCategory(context, CATEGORY_SALES)
             ACTION_CATEGORY_STOCK -> setCategory(context, CATEGORY_STOCK)
             ACTION_CATEGORY_HEALTH -> setCategory(context, CATEGORY_HEALTH)
-            ACTION_REFRESH -> {}
+            ACTION_REFRESH -> H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
         }
         refreshAll(context)
     }
