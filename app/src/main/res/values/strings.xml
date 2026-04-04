@@ -78,4 +78,13 @@
     <string name="insights_kpi_collection">TAUX COLLECTE</string>
     <string name="insights_refresh">↻</string>
     <string name="insights_open_dashboard">Ouvrir dashboard</string>
+    <string name="notif_channel_name">H360 Insights Alerts</string>
+    <string name="notif_channel_desc">Alertes metier H360 pour stock, offline, copilot et factures.</string>
+    <string name="notif_offline_title">H360 Offline</string>
+    <string name="notif_offline_text">%1$d transactions en attente de synchro.</string>
+    <string name="notif_stock_title">H360 Stock Alert</string>
+    <string name="notif_stock_text">%1$d mismatch stock detectes.</string>
+    <string name="notif_overdue_title">Factures en retard</string>
+    <string name="notif_overdue_text">%1$d factures en retard a suivre.</string>
+    <string name="notif_copilot_title">H360 Copilot</string>
 </resources>

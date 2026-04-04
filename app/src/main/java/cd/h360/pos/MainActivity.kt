@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity() {
             onOfflinePending = { count ->
                 H360WidgetUpdater.rememberOfflinePending(this, count)
                 H360WidgetUpdater.refreshAllWidgets(this)
+                H360NotificationDispatcher.notifyOfflinePending(this, count)
             },
             onLastSync = { lastSync ->
                 H360WidgetUpdater.rememberLastSync(this, lastSync)
@@ -107,10 +108,12 @@ class MainActivity : AppCompatActivity() {
             onStockInsights = { lowStock, mismatch ->
                 H360WidgetUpdater.rememberStockInsights(this, lowStock, mismatch)
                 H360WidgetUpdater.refreshAllWidgets(this)
+                H360NotificationDispatcher.notifyStockMismatch(this, mismatch)
             },
             onFinanceInsights = { expense, profit, overdue, collection ->
                 H360WidgetUpdater.rememberFinanceInsights(this, expense, profit, overdue, collection)
                 H360WidgetUpdater.refreshAllWidgets(this)
+                H360NotificationDispatcher.notifyOverdueInvoices(this, overdue)
             },
             onSalesTrend = { trend ->
                 H360WidgetUpdater.rememberSalesTrend(this, trend)
@@ -119,6 +122,7 @@ class MainActivity : AppCompatActivity() {
             onCopilotResponse = { response ->
                 H360WidgetUpdater.rememberCopilotResponse(this, response)
                 H360CopilotWidgetProvider.refreshAll(this)
+                H360NotificationDispatcher.notifyCopilotResponse(this, response)
             }
         )
     }
