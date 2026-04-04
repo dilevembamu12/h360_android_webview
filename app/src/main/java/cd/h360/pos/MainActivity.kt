@@ -6,19 +6,17 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.pdf.PdfDocument
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
-import android.os.CancellationSignal
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.os.ParcelFileDescriptor
 import android.view.View
 import android.print.PrintAttributes
-import android.print.PrintDocumentAdapter
-import android.print.PrintDocumentInfo
-import android.print.PageRange
 import android.print.PrintManager
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -37,6 +35,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import cd.h360.pos.databinding.ActivityMainBinding
 import java.io.File
+import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
@@ -438,66 +437,36 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.pdf_export_failed), Toast.LENGTH_SHORT).show()
             return
         }
+        val webView = binding.webView
+        if (webView.width <= 0 || webView.height <= 0) {
+            Toast.makeText(this, getString(R.string.pdf_export_failed), Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val fileName = "h360-invoice-${System.currentTimeMillis()}.pdf"
         val outputDir = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "invoices")
         if (!outputDir.exists()) {
             outputDir.mkdirs()
         }
         val outputFile = File(outputDir, fileName)
-        val adapter = binding.webView.createPrintDocumentAdapter(fileName)
-        val attributes = PrintAttributes.Builder()
-            .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
-            .setResolution(PrintAttributes.Resolution("pdf", "pdf", 300, 300))
-            .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
-            .build()
 
-        adapter.onStart()
-        adapter.onLayout(
-            null,
-            attributes,
-            CancellationSignal(),
-            object : PrintDocumentAdapter.LayoutResultCallback() {
-                override fun onLayoutFinished(info: PrintDocumentInfo?, changed: Boolean) {
-                    writePdfFile(adapter, outputFile, shareAfterExport)
+        val bitmap = Bitmap.createBitmap(webView.width, webView.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        webView.draw(canvas)
+
+        bgExecutor.execute {
+            val pdf = PdfDocument()
+            try {
+                val pageInfo = PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
+                val page = pdf.startPage(pageInfo)
+                page.canvas.drawBitmap(bitmap, 0f, 0f, null)
+                pdf.finishPage(page)
+
+                FileOutputStream(outputFile).use { out ->
+                    pdf.writeTo(out)
                 }
 
-                override fun onLayoutFailed(error: CharSequence?) {
-                    adapter.onFinish()
-                    Toast.makeText(
-                        this@MainActivity,
-                        error?.toString() ?: getString(R.string.pdf_export_failed),
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            },
-            null
-        )
-    }
-
-    private fun writePdfFile(adapter: PrintDocumentAdapter, outputFile: File, shareAfterExport: Boolean) {
-        val pfd = runCatching {
-            ParcelFileDescriptor.open(
-                outputFile,
-                ParcelFileDescriptor.MODE_READ_WRITE or
-                    ParcelFileDescriptor.MODE_CREATE or
-                    ParcelFileDescriptor.MODE_TRUNCATE
-            )
-        }.getOrNull()
-
-        if (pfd == null) {
-            adapter.onFinish()
-            Toast.makeText(this, getString(R.string.pdf_export_failed), Toast.LENGTH_LONG).show()
-            return
-        }
-
-        adapter.onWrite(
-            arrayOf(PageRange.ALL_PAGES),
-            pfd,
-            CancellationSignal(),
-            object : PrintDocumentAdapter.WriteResultCallback() {
-                override fun onWriteFinished(pages: Array<PageRange>) {
-                    runCatching { pfd.close() }
-                    adapter.onFinish()
+                runOnUiThread {
                     if (shareAfterExport) {
                         sharePdfFile(outputFile)
                     } else {
@@ -508,18 +477,15 @@ class MainActivity : AppCompatActivity() {
                         ).show()
                     }
                 }
-
-                override fun onWriteFailed(error: CharSequence?) {
-                    runCatching { pfd.close() }
-                    adapter.onFinish()
-                    Toast.makeText(
-                        this@MainActivity,
-                        error?.toString() ?: getString(R.string.pdf_export_failed),
-                        Toast.LENGTH_LONG
-                    ).show()
+            } catch (_: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, getString(R.string.pdf_export_failed), Toast.LENGTH_LONG).show()
                 }
+            } finally {
+                pdf.close()
+                bitmap.recycle()
             }
-        )
+        }
     }
 
     private fun sharePdfFile(file: File) {
