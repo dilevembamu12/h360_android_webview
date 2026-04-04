@@ -35,4 +35,9 @@
         android:id="@+id/action_pos"
         android:title="@string/shortcut_pos"
         android:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_widget_settings"
+        android:title="@string/action_widget_settings"
+        android:showAsAction="never" />
 </menu>

@@ -9,6 +9,7 @@
     <string name="action_print_invoice">Imprimer facture</string>
     <string name="action_export_pdf">Exporter en PDF</string>
     <string name="action_share_pdf">Partager PDF</string>
+    <string name="action_widget_settings">Configurer widgets</string>
     <string name="pdf_export_success">PDF exporte: %1$s</string>
     <string name="pdf_export_failed">Echec export PDF</string>
     <string name="pdf_share_title">Partager facture PDF</string>
@@ -36,4 +37,17 @@
     <string name="widget_stat_open_count">SESSIONS</string>
     <string name="widget_stat_last_sync">LAST SYNC</string>
     <string name="widget_stat_last_page">DERNIERE PAGE</string>
+    <string name="widget_stat_sales_today">VENTES JOUR</string>
+    <string name="widget_stat_tickets_today">TICKETS</string>
+    <string name="widget_stat_avg_ticket">PANIER MOYEN</string>
+    <string name="widget_stat_low_stock">STOCK CRITIQUE</string>
+    <string name="widget_stat_mismatch">STOCK MISMATCH</string>
+    <string name="widget_customize">Personnaliser</string>
+    <string name="widget_settings_title">Widgets H360</string>
+    <string name="widget_settings_subtitle">Choisir les sections a afficher</string>
+    <string name="widget_module_sales">Module Ventes</string>
+    <string name="widget_module_stock">Module Stock</string>
+    <string name="widget_module_offline">Module Offline</string>
+    <string name="widget_module_activity">Module Activite</string>
+    <string name="widget_settings_save">Enregistrer</string>
 </resources>

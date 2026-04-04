@@ -95,6 +95,18 @@ class MainActivity : AppCompatActivity() {
             onLastSync = { lastSync ->
                 H360WidgetUpdater.rememberLastSync(this, lastSync)
                 H360WidgetUpdater.refreshAllWidgets(this)
+            },
+            onCapabilities = { capabilities ->
+                H360WidgetUpdater.rememberCapabilities(this, capabilities)
+                H360WidgetUpdater.refreshAllWidgets(this)
+            },
+            onSalesInsights = { salesToday, ticketsToday, avgTicket ->
+                H360WidgetUpdater.rememberSalesInsights(this, salesToday, ticketsToday, avgTicket)
+                H360WidgetUpdater.refreshAllWidgets(this)
+            },
+            onStockInsights = { lowStock, mismatch ->
+                H360WidgetUpdater.rememberStockInsights(this, lowStock, mismatch)
+                H360WidgetUpdater.refreshAllWidgets(this)
             }
         )
     }
@@ -158,6 +170,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.action_share_pdf -> {
                     exportCurrentPageAsPdf(shareAfterExport = true)
+                    true
+                }
+                R.id.action_widget_settings -> {
+                    startActivity(Intent(this, WidgetSettingsActivity::class.java))
                     true
                 }
                 else -> false
@@ -530,7 +546,10 @@ class MainActivity : AppCompatActivity() {
 private class H360JsBridge(
     private val onRole: (String) -> Unit,
     private val onOfflinePending: (Int) -> Unit,
-    private val onLastSync: (String) -> Unit
+    private val onLastSync: (String) -> Unit,
+    private val onCapabilities: (Set<String>) -> Unit,
+    private val onSalesInsights: (String, Int, String) -> Unit,
+    private val onStockInsights: (Int, Int) -> Unit
 ) {
     @JavascriptInterface
     fun setRole(role: String?) {
@@ -553,5 +572,25 @@ private class H360JsBridge(
         if (safeLastSync.isNotBlank()) {
             onLastSync(safeLastSync)
         }
+    }
+
+    @JavascriptInterface
+    fun setCapabilities(csv: String?) {
+        val caps = csv.orEmpty()
+            .split(",")
+            .map { it.trim().lowercase() }
+            .filter { it.isNotBlank() }
+            .toSet()
+        onCapabilities(caps)
+    }
+
+    @JavascriptInterface
+    fun setSalesInsights(total: String?, tickets: Int, avgTicket: String?) {
+        onSalesInsights(total?.trim().orEmpty(), tickets, avgTicket?.trim().orEmpty())
+    }
+
+    @JavascriptInterface
+    fun setStockInsights(lowStock: Int, mismatch: Int) {
+        onStockInsights(lowStock, mismatch)
     }
 }

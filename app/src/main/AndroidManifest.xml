@@ -50,6 +50,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".WidgetSettingsActivity"
+            android:exported="false" />
+
         <receiver
             android:name=".H360WidgetProvider"
             android:exported="true">
