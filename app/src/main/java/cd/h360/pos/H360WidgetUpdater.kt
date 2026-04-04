@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.webkit.CookieManager
 import android.widget.RemoteViews
 import org.json.JSONObject
@@ -18,6 +19,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 object H360WidgetUpdater {
+    private const val TAG = "H360WidgetUpdater"
     const val PREFS_NAME = "h360_widget_prefs"
     const val KEY_ROLE = "role"
     const val KEY_OFFLINE_PENDING = "offline_pending"
@@ -40,8 +42,10 @@ object H360WidgetUpdater {
     const val KEY_PROFIT_TODAY = "profit_today"
     const val KEY_OVERDUE_INVOICES = "overdue_invoices"
     const val KEY_COLLECTION_RATE = "collection_rate"
-    private const val KEY_LAST_REMOTE_FETCH_MS = "last_remote_fetch_ms"
+    const val KEY_LAST_REMOTE_FETCH_MS = "last_remote_fetch_ms"
     private const val KEY_REMOTE_REFRESH_INTERVAL_SEC = "remote_refresh_interval_sec"
+    const val KEY_REMOTE_SYNC_STATE = "remote_sync_state"
+    const val KEY_REMOTE_SYNC_MESSAGE = "remote_sync_message"
     private const val DEFAULT_REMOTE_REFRESH_INTERVAL_SEC = 300
 
     private const val MODULE_SALES = "sales"
@@ -161,8 +165,10 @@ object H360WidgetUpdater {
         networkExecutor.execute {
             try {
                 fetchAndStoreRemoteInsights(appContext)
-            } catch (_: Exception) {
-                // Keep local widget data as fallback when remote endpoint fails.
+            } catch (e: Exception) {
+                rememberRemoteSyncState(appContext, "error", "Sync error: ${e.message ?: "unknown"}")
+                Log.w(TAG, "Remote insights sync failed", e)
+                renderWidgets(appContext)
             } finally {
                 remoteFetchInProgress.set(false)
             }
@@ -199,12 +205,38 @@ object H360WidgetUpdater {
             conn.setRequestProperty("Cookie", cookie)
         }
 
-        conn.inputStream.use { input ->
-            val body = input.bufferedReader().use { it.readText() }
-            if (conn.responseCode !in 200..299 || body.isBlank()) return
-            val json = JSONObject(body)
-            applyRemoteInsights(context, json)
+        val code = conn.responseCode
+        val contentType = conn.contentType.orEmpty().lowercase()
+        val rawBody = runCatching {
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        }.getOrDefault("")
+
+        if (code == HttpURLConnection.HTTP_UNAUTHORIZED || code == HttpURLConnection.HTTP_FORBIDDEN) {
+            rememberRemoteSyncState(context, "auth_required", "Session expiree: reconnecte-toi")
+            return
         }
+        if (code !in 200..299) {
+            rememberRemoteSyncState(context, "error", "API insights HTTP $code")
+            Log.w(TAG, "Insights endpoint returned HTTP $code body=$rawBody")
+            return
+        }
+        if (!contentType.contains("application/json")) {
+            rememberRemoteSyncState(context, "auth_required", "Session requise pour insights")
+            Log.w(TAG, "Insights endpoint non-JSON contentType=$contentType body=$rawBody")
+            return
+        }
+        if (rawBody.isBlank()) {
+            rememberRemoteSyncState(context, "error", "API insights vide")
+            return
+        }
+
+        val json = JSONObject(rawBody)
+        if (json.optJSONObject("insights") == null) {
+            rememberRemoteSyncState(context, "error", "JSON insights invalide")
+            return
+        }
+        applyRemoteInsights(context, json)
     }
 
     private fun applyRemoteInsights(context: Context, json: JSONObject) {
@@ -275,8 +307,16 @@ object H360WidgetUpdater {
             .putLong(KEY_LAST_REMOTE_FETCH_MS, System.currentTimeMillis())
             .putInt(KEY_REMOTE_REFRESH_INTERVAL_SEC, refreshSec)
             .apply()
+        rememberRemoteSyncState(context, "ok", "Sync OK")
 
         renderWidgets(context)
+    }
+
+    private fun rememberRemoteSyncState(context: Context, state: String, message: String) {
+        prefs(context).edit()
+            .putString(KEY_REMOTE_SYNC_STATE, state)
+            .putString(KEY_REMOTE_SYNC_MESSAGE, message.take(120))
+            .apply()
     }
 
     private fun buildRemoteViews(context: Context): RemoteViews {

@@ -345,6 +345,9 @@ class MainActivity : AppCompatActivity() {
                         H360WidgetUpdater.rememberRole(this@MainActivity, inferredRole)
                         AppShortcutsManager.updateForRole(this@MainActivity, inferredRole)
                     }
+                    if (url.startsWith(appOrigin) && !url.contains("/login")) {
+                        H360WidgetUpdater.refreshFromRemoteIfDue(this@MainActivity, force = true)
+                    }
                 }
                 H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
                 super.onPageFinished(view, url)

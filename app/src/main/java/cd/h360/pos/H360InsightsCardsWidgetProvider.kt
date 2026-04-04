@@ -44,6 +44,9 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
 
             val prefs = context.getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
             val cat = prefs.getString(KEY_INSIGHTS_CATEGORY, CATEGORY_SALES) ?: CATEGORY_SALES
+            val syncState = prefs.getString(H360WidgetUpdater.KEY_REMOTE_SYNC_STATE, "idle") ?: "idle"
+            val syncMessage = prefs.getString(H360WidgetUpdater.KEY_REMOTE_SYNC_MESSAGE, "En attente de sync") ?: "En attente de sync"
+            val hasSynced = prefs.getLong(H360WidgetUpdater.KEY_LAST_REMOTE_FETCH_MS, 0L) > 0L
             val salesToday = prefs.getString(H360WidgetUpdater.KEY_SALES_TODAY, "0") ?: "0"
             val ticketsToday = prefs.getInt(H360WidgetUpdater.KEY_TICKETS_TODAY, 0)
             val avgTicket = prefs.getString(H360WidgetUpdater.KEY_AVG_TICKET, "0") ?: "0"
@@ -65,25 +68,42 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                         else -> context.getString(R.string.insights_title_sales)
                     }
                 )
+                views.setTextViewText(R.id.widgetCardsSubtitle, syncMessage)
+                views.setTextColor(
+                    R.id.widgetCardsSubtitle,
+                    if (syncState == "ok") 0xFF8FD19E.toInt() else 0xFFFFB4B4.toInt()
+                )
+
+                val blocked = !hasSynced && syncState != "ok"
+                val safeSalesToday = if (blocked) "--" else salesToday
+                val safeTicketsToday = if (blocked) "--" else ticketsToday.toString()
+                val safeAvgTicket = if (blocked) "--" else avgTicket
+                val safeLowStock = if (blocked) "--" else lowStock.toString()
+                val safeMismatch = if (blocked) "--" else mismatch.toString()
+                val safeExpense = if (blocked) "--" else expense
+                val safeProfit = if (blocked) "--" else profit
+                val safeOverdue = if (blocked) "--" else overdue.toString()
+                val safeCollection = if (blocked) "--" else collection
+                val safeTrend = if (blocked) "--" else salesTrend
 
                 val kpis: List<Pair<String, String>> = when (cat) {
                     CATEGORY_STOCK -> listOf(
-                        context.getString(R.string.insights_kpi_low_stock) to lowStock.toString(),
-                        context.getString(R.string.insights_kpi_mismatch) to mismatch.toString(),
-                        context.getString(R.string.insights_kpi_tickets) to ticketsToday.toString(),
-                        context.getString(R.string.insights_kpi_sales_trend) to salesTrend
+                        context.getString(R.string.insights_kpi_low_stock) to safeLowStock,
+                        context.getString(R.string.insights_kpi_mismatch) to safeMismatch,
+                        context.getString(R.string.insights_kpi_tickets) to safeTicketsToday,
+                        context.getString(R.string.insights_kpi_sales_trend) to safeTrend
                     )
                     CATEGORY_HEALTH -> listOf(
-                        context.getString(R.string.insights_kpi_profit) to profit,
-                        context.getString(R.string.insights_kpi_expense) to expense,
-                        context.getString(R.string.insights_kpi_overdue) to overdue.toString(),
-                        context.getString(R.string.insights_kpi_collection) to collection
+                        context.getString(R.string.insights_kpi_profit) to safeProfit,
+                        context.getString(R.string.insights_kpi_expense) to safeExpense,
+                        context.getString(R.string.insights_kpi_overdue) to safeOverdue,
+                        context.getString(R.string.insights_kpi_collection) to safeCollection
                     )
                     else -> listOf(
-                        context.getString(R.string.insights_kpi_sales_today) to salesToday,
-                        context.getString(R.string.insights_kpi_tickets) to ticketsToday.toString(),
-                        context.getString(R.string.insights_kpi_avg_ticket) to avgTicket,
-                        context.getString(R.string.insights_kpi_sales_trend) to salesTrend
+                        context.getString(R.string.insights_kpi_sales_today) to safeSalesToday,
+                        context.getString(R.string.insights_kpi_tickets) to safeTicketsToday,
+                        context.getString(R.string.insights_kpi_avg_ticket) to safeAvgTicket,
+                        context.getString(R.string.insights_kpi_sales_trend) to safeTrend
                     )
                 }
 
