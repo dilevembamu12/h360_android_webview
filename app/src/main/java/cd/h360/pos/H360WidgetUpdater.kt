@@ -190,53 +190,85 @@ object H360WidgetUpdater {
     }
 
     private fun fetchAndStoreRemoteInsights(context: Context) {
-        val url = BuildConfig.WIDGET_INSIGHTS_URL
-        if (url.isBlank()) return
+        val urls = candidateInsightsUrls()
+        if (urls.isEmpty()) return
 
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 6000
-            readTimeout = 6000
-            setRequestProperty("Accept", "application/json")
+        var lastError = "API insights indisponible"
+        urls.forEach { url ->
+            val result = requestInsights(url)
+            when {
+                result.code == HttpURLConnection.HTTP_UNAUTHORIZED || result.code == HttpURLConnection.HTTP_FORBIDDEN -> {
+                    rememberRemoteSyncState(context, "auth_required", "Session expiree: reconnecte-toi")
+                    return
+                }
+                result.code == HttpURLConnection.HTTP_NOT_FOUND -> {
+                    lastError = "API insights HTTP 404"
+                    Log.w(TAG, "Insights endpoint not found: $url")
+                }
+                result.code !in 200..299 -> {
+                    lastError = "API insights HTTP ${result.code}"
+                    Log.w(TAG, "Insights endpoint HTTP ${result.code} url=$url body=${result.body}")
+                }
+                !result.contentType.contains("application/json") -> {
+                    lastError = "Session requise pour insights"
+                    Log.w(TAG, "Insights endpoint non-JSON url=$url ct=${result.contentType} body=${result.body}")
+                }
+                result.body.isBlank() -> {
+                    lastError = "API insights vide"
+                }
+                else -> {
+                    val json = JSONObject(result.body)
+                    if (json.optJSONObject("insights") != null) {
+                        applyRemoteInsights(context, json)
+                        return
+                    }
+                    lastError = "JSON insights invalide"
+                }
+            }
         }
+        rememberRemoteSyncState(context, "error", lastError)
+    }
 
-        val cookie = CookieManager.getInstance().getCookie(url)
-        if (!cookie.isNullOrBlank()) {
-            conn.setRequestProperty("Cookie", cookie)
+    private fun requestInsights(url: String): InsightHttpResult {
+        return try {
+            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 6000
+                readTimeout = 6000
+                setRequestProperty("Accept", "application/json")
+            }
+            val cookie = CookieManager.getInstance().getCookie(url)
+            if (!cookie.isNullOrBlank()) {
+                conn.setRequestProperty("Cookie", cookie)
+            }
+            val code = conn.responseCode
+            val contentType = conn.contentType.orEmpty().lowercase()
+            val body = runCatching {
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            }.getOrDefault("")
+            InsightHttpResult(code, contentType, body)
+        } catch (e: Exception) {
+            InsightHttpResult(-1, "", e.message.orEmpty())
         }
+    }
 
-        val code = conn.responseCode
-        val contentType = conn.contentType.orEmpty().lowercase()
-        val rawBody = runCatching {
-            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-        }.getOrDefault("")
-
-        if (code == HttpURLConnection.HTTP_UNAUTHORIZED || code == HttpURLConnection.HTTP_FORBIDDEN) {
-            rememberRemoteSyncState(context, "auth_required", "Session expiree: reconnecte-toi")
-            return
+    private fun candidateInsightsUrls(): List<String> {
+        val urls = linkedSetOf<String>()
+        val configured = BuildConfig.WIDGET_INSIGHTS_URL.trim()
+        if (configured.isNotBlank()) {
+            urls.add(configured)
         }
-        if (code !in 200..299) {
-            rememberRemoteSyncState(context, "error", "API insights HTTP $code")
-            Log.w(TAG, "Insights endpoint returned HTTP $code body=$rawBody")
-            return
+        val origin = runCatching {
+            val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
+            "${base.scheme}://${base.host}"
+        }.getOrNull()
+        if (!origin.isNullOrBlank()) {
+            urls.add("$origin/h360/widgets/insights")
+            urls.add("$origin/home/widgets/insights")
+            urls.add("$origin/widgets/insights")
         }
-        if (!contentType.contains("application/json")) {
-            rememberRemoteSyncState(context, "auth_required", "Session requise pour insights")
-            Log.w(TAG, "Insights endpoint non-JSON contentType=$contentType body=$rawBody")
-            return
-        }
-        if (rawBody.isBlank()) {
-            rememberRemoteSyncState(context, "error", "API insights vide")
-            return
-        }
-
-        val json = JSONObject(rawBody)
-        if (json.optJSONObject("insights") == null) {
-            rememberRemoteSyncState(context, "error", "JSON insights invalide")
-            return
-        }
-        applyRemoteInsights(context, json)
+        return urls.toList()
     }
 
     private fun applyRemoteInsights(context: Context, json: JSONObject) {
@@ -450,4 +482,10 @@ object H360WidgetUpdater {
     private fun nowStamp(): String {
         return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
     }
+
+    private data class InsightHttpResult(
+        val code: Int,
+        val contentType: String,
+        val body: String
+    )
 }
