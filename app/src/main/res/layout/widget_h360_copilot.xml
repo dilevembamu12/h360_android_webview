@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="#111D2E">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/copilot_widget_title"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:textSize="15sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/copilot_last_prompt"
+        android:textColor="#9FB2CC"
+        android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/widgetCopilotLastPrompt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#182B45"
+        android:padding="8dp"
+        android:textColor="@android:color/white"
+        android:maxLines="2" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/copilot_last_response"
+        android:textColor="#9FB2CC"
+        android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/widgetCopilotLastResponse"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#182B45"
+        android:padding="8dp"
+        android:textColor="#B5F3C5"
+        android:maxLines="3" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/widgetPromptSales"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/copilot_quick_sales"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/widgetPromptStock"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="@string/copilot_quick_stock"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/widgetPromptMismatch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/copilot_quick_mismatch"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/widgetBtnOpenChat"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="@string/copilot_open_chat"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -107,6 +107,10 @@ class MainActivity : AppCompatActivity() {
             onStockInsights = { lowStock, mismatch ->
                 H360WidgetUpdater.rememberStockInsights(this, lowStock, mismatch)
                 H360WidgetUpdater.refreshAllWidgets(this)
+            },
+            onCopilotResponse = { response ->
+                H360WidgetUpdater.rememberCopilotResponse(this, response)
+                H360CopilotWidgetProvider.refreshAll(this)
             }
         )
     }
@@ -316,6 +320,13 @@ class MainActivity : AppCompatActivity() {
                 H360WidgetUpdater.rememberOnline(this@MainActivity, online)
                 H360WidgetUpdater.rememberLastUpdate(this@MainActivity, nowStamp())
                 if (!url.isNullOrBlank()) {
+                    if (url.contains("/h360-copilot/chat")) {
+                        val prompt = intent?.data?.getQueryParameter("prompt")
+                        if (!prompt.isNullOrBlank()) {
+                            H360WidgetUpdater.rememberCopilotPrompt(this@MainActivity, prompt)
+                            H360CopilotWidgetProvider.refreshAll(this@MainActivity)
+                        }
+                    }
                     H360WidgetUpdater.rememberLastPage(this@MainActivity, sanitizePath(url))
                     val inferredRole = inferRoleFromUrl(url)
                     if (inferredRole != null && inferredRole != readRole()) {
@@ -549,7 +560,8 @@ private class H360JsBridge(
     private val onLastSync: (String) -> Unit,
     private val onCapabilities: (Set<String>) -> Unit,
     private val onSalesInsights: (String, Int, String) -> Unit,
-    private val onStockInsights: (Int, Int) -> Unit
+    private val onStockInsights: (Int, Int) -> Unit,
+    private val onCopilotResponse: (String) -> Unit
 ) {
     @JavascriptInterface
     fun setRole(role: String?) {
@@ -592,5 +604,13 @@ private class H360JsBridge(
     @JavascriptInterface
     fun setStockInsights(lowStock: Int, mismatch: Int) {
         onStockInsights(lowStock, mismatch)
+    }
+
+    @JavascriptInterface
+    fun setCopilotResponse(text: String?) {
+        val safeText = text?.trim().orEmpty()
+        if (safeText.isNotBlank()) {
+            onCopilotResponse(safeText)
+        }
     }
 }

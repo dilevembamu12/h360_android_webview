@@ -54,6 +54,10 @@
             android:name=".WidgetSettingsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".CopilotComposerActivity"
+            android:exported="false" />
+
         <receiver
             android:name=".H360WidgetProvider"
             android:exported="true">
@@ -63,6 +67,19 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/h360_status_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".H360CopilotWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="cd.h360.pos.ACTION_QUICK_PROMPT" />
+                <action android:name="cd.h360.pos.ACTION_OPEN_COMPOSER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/h360_copilot_widget_info" />
         </receiver>
 
         <provider

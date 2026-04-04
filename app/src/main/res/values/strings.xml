@@ -50,4 +50,14 @@
     <string name="widget_module_offline">Module Offline</string>
     <string name="widget_module_activity">Module Activite</string>
     <string name="widget_settings_save">Enregistrer</string>
+    <string name="copilot_widget_title">H360 Copilot Widget</string>
+    <string name="copilot_last_prompt">Dernier prompt</string>
+    <string name="copilot_last_response">Derniere reponse</string>
+    <string name="copilot_quick_sales">Ventes</string>
+    <string name="copilot_quick_stock">Stock</string>
+    <string name="copilot_quick_mismatch">Mismatch</string>
+    <string name="copilot_open_chat">Chat</string>
+    <string name="copilot_prompt_hint">Ecrire votre question Copilot...</string>
+    <string name="copilot_send_prompt">Envoyer</string>
+    <string name="copilot_response_pending">Reponse Copilot en cours...</string>
 </resources>

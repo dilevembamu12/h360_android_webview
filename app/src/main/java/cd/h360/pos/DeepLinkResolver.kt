@@ -10,7 +10,7 @@ object DeepLinkResolver {
         val host = uri.host?.lowercase().orEmpty()
 
         if (uri.scheme == "h360" && host == "shortcut") {
-            return shortcutToUrl(uri.lastPathSegment.orEmpty(), homeUrl)
+            return shortcutToUrl(uri.lastPathSegment.orEmpty(), homeUrl, uri.getQueryParameter("prompt"))
         }
 
         return if (uri.scheme == "https" && allowedHosts.contains(host)) {
@@ -20,10 +20,16 @@ object DeepLinkResolver {
         }
     }
 
-    private fun shortcutToUrl(shortcut: String, homeUrl: String): String {
+    private fun shortcutToUrl(shortcut: String, homeUrl: String, prompt: String?): String {
         val appOrigin = Uri.parse(homeUrl).let { "${it.scheme}://${it.host}" }
         return when (shortcut) {
-            "copilot" -> "$appOrigin/h360-copilot/chat"
+            "copilot" -> {
+                if (prompt.isNullOrBlank()) {
+                    "$appOrigin/h360-copilot/chat"
+                } else {
+                    "$appOrigin/h360-copilot/chat?widget_prompt=${Uri.encode(prompt)}"
+                }
+            }
             "offline" -> "$appOrigin/h360offline"
             "new-sale" -> "$appOrigin/sells/create"
             "pos" -> "$appOrigin/pos/create"

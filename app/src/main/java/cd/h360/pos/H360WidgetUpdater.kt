@@ -24,6 +24,8 @@ object H360WidgetUpdater {
     const val KEY_AVG_TICKET = "avg_ticket"
     const val KEY_LOW_STOCK = "low_stock"
     const val KEY_STOCK_MISMATCH = "stock_mismatch"
+    const val KEY_COPILOT_LAST_PROMPT = "copilot_last_prompt"
+    const val KEY_COPILOT_LAST_RESPONSE = "copilot_last_response"
 
     private const val MODULE_SALES = "sales"
     private const val MODULE_STOCK = "stock"
@@ -88,6 +90,14 @@ object H360WidgetUpdater {
             .putInt(KEY_LOW_STOCK, lowStock.coerceAtLeast(0))
             .putInt(KEY_STOCK_MISMATCH, stockMismatch.coerceAtLeast(0))
             .apply()
+    }
+
+    fun rememberCopilotPrompt(context: Context, prompt: String) {
+        prefs(context).edit().putString(KEY_COPILOT_LAST_PROMPT, prompt.ifBlank { "-" }).apply()
+    }
+
+    fun rememberCopilotResponse(context: Context, response: String) {
+        prefs(context).edit().putString(KEY_COPILOT_LAST_RESPONSE, response.ifBlank { "-" }).apply()
     }
 
     fun refreshAllWidgets(context: Context) {
