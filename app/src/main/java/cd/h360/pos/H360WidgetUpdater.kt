@@ -26,6 +26,11 @@ object H360WidgetUpdater {
     const val KEY_STOCK_MISMATCH = "stock_mismatch"
     const val KEY_COPILOT_LAST_PROMPT = "copilot_last_prompt"
     const val KEY_COPILOT_LAST_RESPONSE = "copilot_last_response"
+    const val KEY_SALES_TREND = "sales_trend"
+    const val KEY_EXPENSE_TODAY = "expense_today"
+    const val KEY_PROFIT_TODAY = "profit_today"
+    const val KEY_OVERDUE_INVOICES = "overdue_invoices"
+    const val KEY_COLLECTION_RATE = "collection_rate"
 
     private const val MODULE_SALES = "sales"
     private const val MODULE_STOCK = "stock"
@@ -100,16 +105,37 @@ object H360WidgetUpdater {
         prefs(context).edit().putString(KEY_COPILOT_LAST_RESPONSE, response.ifBlank { "-" }).apply()
     }
 
+    fun rememberFinanceInsights(
+        context: Context,
+        expenseToday: String,
+        profitToday: String,
+        overdueInvoices: Int,
+        collectionRate: String
+    ) {
+        prefs(context).edit()
+            .putString(KEY_EXPENSE_TODAY, expenseToday.ifBlank { "0" })
+            .putString(KEY_PROFIT_TODAY, profitToday.ifBlank { "0" })
+            .putInt(KEY_OVERDUE_INVOICES, overdueInvoices.coerceAtLeast(0))
+            .putString(KEY_COLLECTION_RATE, collectionRate.ifBlank { "0%" })
+            .apply()
+    }
+
+    fun rememberSalesTrend(context: Context, trend: String) {
+        prefs(context).edit().putString(KEY_SALES_TREND, trend.ifBlank { "Stable" }).apply()
+    }
+
     fun refreshAllWidgets(context: Context) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val widgetComponent = ComponentName(context, H360WidgetProvider::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(widgetComponent)
-        if (widgetIds.isEmpty()) return
-
-        widgetIds.forEach { widgetId ->
-            val views = buildRemoteViews(context)
-            appWidgetManager.updateAppWidget(widgetId, views)
+        if (widgetIds.isNotEmpty()) {
+            widgetIds.forEach { widgetId ->
+                val views = buildRemoteViews(context)
+                appWidgetManager.updateAppWidget(widgetId, views)
+            }
         }
+        H360CopilotWidgetProvider.refreshAll(context)
+        H360InsightsCardsWidgetProvider.refreshAll(context)
     }
 
     private fun buildRemoteViews(context: Context): RemoteViews {

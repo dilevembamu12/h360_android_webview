@@ -108,6 +108,14 @@ class MainActivity : AppCompatActivity() {
                 H360WidgetUpdater.rememberStockInsights(this, lowStock, mismatch)
                 H360WidgetUpdater.refreshAllWidgets(this)
             },
+            onFinanceInsights = { expense, profit, overdue, collection ->
+                H360WidgetUpdater.rememberFinanceInsights(this, expense, profit, overdue, collection)
+                H360WidgetUpdater.refreshAllWidgets(this)
+            },
+            onSalesTrend = { trend ->
+                H360WidgetUpdater.rememberSalesTrend(this, trend)
+                H360WidgetUpdater.refreshAllWidgets(this)
+            },
             onCopilotResponse = { response ->
                 H360WidgetUpdater.rememberCopilotResponse(this, response)
                 H360CopilotWidgetProvider.refreshAll(this)
@@ -561,6 +569,8 @@ private class H360JsBridge(
     private val onCapabilities: (Set<String>) -> Unit,
     private val onSalesInsights: (String, Int, String) -> Unit,
     private val onStockInsights: (Int, Int) -> Unit,
+    private val onFinanceInsights: (String, String, Int, String) -> Unit,
+    private val onSalesTrend: (String) -> Unit,
     private val onCopilotResponse: (String) -> Unit
 ) {
     @JavascriptInterface
@@ -604,6 +614,24 @@ private class H360JsBridge(
     @JavascriptInterface
     fun setStockInsights(lowStock: Int, mismatch: Int) {
         onStockInsights(lowStock, mismatch)
+    }
+
+    @JavascriptInterface
+    fun setFinanceInsights(expenseToday: String?, profitToday: String?, overdueInvoices: Int, collectionRate: String?) {
+        onFinanceInsights(
+            expenseToday?.trim().orEmpty(),
+            profitToday?.trim().orEmpty(),
+            overdueInvoices,
+            collectionRate?.trim().orEmpty()
+        )
+    }
+
+    @JavascriptInterface
+    fun setSalesTrend(trend: String?) {
+        val safe = trend?.trim().orEmpty()
+        if (safe.isNotBlank()) {
+            onSalesTrend(safe)
+        }
     }
 
     @JavascriptInterface

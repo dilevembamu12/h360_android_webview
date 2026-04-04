@@ -60,4 +60,22 @@
     <string name="copilot_prompt_hint">Ecrire votre question Copilot...</string>
     <string name="copilot_send_prompt">Envoyer</string>
     <string name="copilot_response_pending">Reponse Copilot en cours...</string>
+    <string name="insights_title_sales">Insights Cards: Ventes</string>
+    <string name="insights_title_stock">Insights Cards: Stock</string>
+    <string name="insights_title_health">Insights Cards: Sante business</string>
+    <string name="insights_tab_sales">Ventes</string>
+    <string name="insights_tab_stock">Stock</string>
+    <string name="insights_tab_health">Sante</string>
+    <string name="insights_kpi_sales_today">CA JOUR</string>
+    <string name="insights_kpi_tickets">TICKETS</string>
+    <string name="insights_kpi_avg_ticket">PANIER</string>
+    <string name="insights_kpi_sales_trend">TENDANCE</string>
+    <string name="insights_kpi_low_stock">STOCK BAS</string>
+    <string name="insights_kpi_mismatch">MISMATCH</string>
+    <string name="insights_kpi_profit">PROFIT JOUR</string>
+    <string name="insights_kpi_expense">DEPENSE JOUR</string>
+    <string name="insights_kpi_overdue">FACTURES DUES</string>
+    <string name="insights_kpi_collection">TAUX COLLECTE</string>
+    <string name="insights_refresh">↻</string>
+    <string name="insights_open_dashboard">Ouvrir dashboard</string>
 </resources>

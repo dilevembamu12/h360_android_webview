@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="#111A31">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widgetCardsTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/insights_title_sales"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/widgetCardsRefresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/insights_refresh"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/tabSales"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/insights_tab_sales"
+            android:textAllCaps="false"
+            android:background="#253B63" />
+
+        <Button
+            android:id="@+id/tabStock"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="@string/insights_tab_stock"
+            android:textAllCaps="false"
+            android:background="#182743" />
+
+        <Button
+            android:id="@+id/tabHealth"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="@string/insights_tab_health"
+            android:textAllCaps="false"
+            android:background="#182743" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="#1A2742"
+            android:orientation="vertical"
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/card1Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#9FB2CC"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/card1Value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:background="#1A2742"
+            android:orientation="vertical"
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/card2Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#9FB2CC"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/card2Value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="#1A2742"
+            android:orientation="vertical"
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/card3Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#9FB2CC"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/card3Value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:background="#1A2742"
+            android:orientation="vertical"
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/card4Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#9FB2CC"
+                android:textSize="10sp" />
+            <TextView
+                android:id="@+id/card4Value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/widgetCardsOpen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/insights_open_dashboard"
+        android:textAllCaps="false" />
+
+</LinearLayout>

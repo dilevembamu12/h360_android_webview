@@ -82,6 +82,21 @@
                 android:resource="@xml/h360_copilot_widget_info" />
         </receiver>
 
+        <receiver
+            android:name=".H360InsightsCardsWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="cd.h360.pos.ACTION_CATEGORY_SALES" />
+                <action android:name="cd.h360.pos.ACTION_CATEGORY_STOCK" />
+                <action android:name="cd.h360.pos.ACTION_CATEGORY_HEALTH" />
+                <action android:name="cd.h360.pos.ACTION_INSIGHTS_REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/h360_insights_cards_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
