@@ -96,9 +96,9 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.card4Label, kpis[3].first)
                 views.setTextViewText(R.id.card4Value, kpis[3].second)
 
-                views.setInt(R.id.tabSales, "setBackgroundColor", if (cat == CATEGORY_SALES) 0xFF253B63.toInt() else 0xFF182743.toInt())
-                views.setInt(R.id.tabStock, "setBackgroundColor", if (cat == CATEGORY_STOCK) 0xFF253B63.toInt() else 0xFF182743.toInt())
-                views.setInt(R.id.tabHealth, "setBackgroundColor", if (cat == CATEGORY_HEALTH) 0xFF253B63.toInt() else 0xFF182743.toInt())
+                views.setTextColor(R.id.tabSales, if (cat == CATEGORY_SALES) 0xFFFFFFFF.toInt() else 0xFFB7C9E8.toInt())
+                views.setTextColor(R.id.tabStock, if (cat == CATEGORY_STOCK) 0xFFFFFFFF.toInt() else 0xFFB7C9E8.toInt())
+                views.setTextColor(R.id.tabHealth, if (cat == CATEGORY_HEALTH) 0xFFFFFFFF.toInt() else 0xFFB7C9E8.toInt())
 
                 views.setOnClickPendingIntent(R.id.tabSales, tabPendingIntent(context, ACTION_CATEGORY_SALES, 401))
                 views.setOnClickPendingIntent(R.id.tabStock, tabPendingIntent(context, ACTION_CATEGORY_STOCK, 402))
