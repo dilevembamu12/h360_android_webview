@@ -75,6 +75,14 @@
             android:background="#182743" />
     </LinearLayout>
 
+    <ImageView
+        android:id="@+id/widgetSalesChart"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="6dp"
+        android:scaleType="fitXY"
+        android:contentDescription="@string/insights_chart_desc" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

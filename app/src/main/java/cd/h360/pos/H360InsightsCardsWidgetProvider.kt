@@ -116,6 +116,18 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.card4Label, kpis[3].first)
                 views.setTextViewText(R.id.card4Value, kpis[3].second)
 
+                if (cat == CATEGORY_SALES && hasSynced) {
+                    val chart = H360WidgetUpdater.renderSalesSparkline(context)
+                    if (chart != null) {
+                        views.setImageViewBitmap(R.id.widgetSalesChart, chart)
+                        views.setViewVisibility(R.id.widgetSalesChart, android.view.View.VISIBLE)
+                    } else {
+                        views.setViewVisibility(R.id.widgetSalesChart, android.view.View.GONE)
+                    }
+                } else {
+                    views.setViewVisibility(R.id.widgetSalesChart, android.view.View.GONE)
+                }
+
                 views.setTextColor(R.id.tabSales, if (cat == CATEGORY_SALES) 0xFFFFFFFF.toInt() else 0xFFB7C9E8.toInt())
                 views.setTextColor(R.id.tabStock, if (cat == CATEGORY_STOCK) 0xFFFFFFFF.toInt() else 0xFFB7C9E8.toInt())
                 views.setTextColor(R.id.tabHealth, if (cat == CATEGORY_HEALTH) 0xFFFFFFFF.toInt() else 0xFFB7C9E8.toInt())

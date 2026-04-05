@@ -9,6 +9,9 @@ import android.net.Uri
 import android.util.Log
 import android.webkit.CookieManager
 import android.widget.RemoteViews
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.net.HttpURLConnection
@@ -38,6 +41,7 @@ object H360WidgetUpdater {
     const val KEY_COPILOT_LAST_PROMPT = "copilot_last_prompt"
     const val KEY_COPILOT_LAST_RESPONSE = "copilot_last_response"
     const val KEY_SALES_TREND = "sales_trend"
+    const val KEY_SALES_SERIES = "sales_series"
     const val KEY_EXPENSE_TODAY = "expense_today"
     const val KEY_PROFIT_TODAY = "profit_today"
     const val KEY_OVERDUE_INVOICES = "overdue_invoices"
@@ -141,6 +145,11 @@ object H360WidgetUpdater {
 
     fun rememberSalesTrend(context: Context, trend: String) {
         prefs(context).edit().putString(KEY_SALES_TREND, trend.ifBlank { "Stable" }).apply()
+    }
+
+    fun rememberSalesSeries(context: Context, series: List<Double>) {
+        val serialized = series.joinToString(",") { "%.2f".format(Locale.US, it) }
+        prefs(context).edit().putString(KEY_SALES_SERIES, serialized).apply()
     }
 
     fun rememberCurrencySymbol(context: Context, symbol: String) {
@@ -336,6 +345,14 @@ object H360WidgetUpdater {
                 sales.optString("avg_ticket", "0")
             )
             rememberSalesTrend(context, sales.optString("sales_trend", "Stable"))
+            val seriesArray = sales.optJSONArray("series")
+            if (seriesArray != null) {
+                val series = mutableListOf<Double>()
+                for (i in 0 until seriesArray.length()) {
+                    series.add(seriesArray.optDouble(i, 0.0))
+                }
+                rememberSalesSeries(context, series)
+            }
         }
 
         val stock = insights?.optJSONObject("stock")
@@ -520,6 +537,66 @@ object H360WidgetUpdater {
         val symbol = if (prefsSymbol.isNotBlank()) prefsSymbol else context.getString(R.string.currency_symbol).trim()
         if (symbol.isEmpty()) return trimmed
         return "$symbol $trimmed"
+    }
+
+    fun renderSalesSparkline(context: Context): Bitmap? {
+        val raw = prefs(context).getString(KEY_SALES_SERIES, "").orEmpty()
+        if (raw.isBlank()) return null
+        val points = raw.split(",")
+            .mapNotNull { it.trim().toDoubleOrNull() }
+            .map { it.toFloat() }
+        if (points.isEmpty()) return null
+
+        val width = 320
+        val height = 60
+        val padding = 6f
+        val max = points.maxOrNull() ?: 0f
+        val min = points.minOrNull() ?: 0f
+        val range = (max - min).takeIf { it > 0f } ?: 1f
+
+        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        canvas.drawColor(0xFF111A31.toInt())
+
+        val paintLine = Paint().apply {
+            color = 0xFF3EE2A8.toInt()
+            strokeWidth = 3f
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+        }
+        val paintFill = Paint().apply {
+            color = 0x553EE2A8
+            isAntiAlias = true
+            style = Paint.Style.FILL
+        }
+
+        val count = points.size
+        val step = (width - padding * 2) / (count - 1).coerceAtLeast(1)
+        val scaled = points.mapIndexed { idx, value ->
+            val x = padding + step * idx
+            val y = padding + (height - padding * 2) * (1f - ((value - min) / range))
+            x to y
+        }
+
+        val fillPath = android.graphics.Path()
+        val linePath = android.graphics.Path()
+        scaled.forEachIndexed { index, (x, y) ->
+            if (index == 0) {
+                linePath.moveTo(x, y)
+                fillPath.moveTo(x, height - padding)
+                fillPath.lineTo(x, y)
+            } else {
+                linePath.lineTo(x, y)
+                fillPath.lineTo(x, y)
+            }
+        }
+        val lastX = scaled.last().first
+        fillPath.lineTo(lastX, height - padding)
+        fillPath.close()
+
+        canvas.drawPath(fillPath, paintFill)
+        canvas.drawPath(linePath, paintLine)
+        return bmp
     }
 
     private data class InsightHttpResult(
