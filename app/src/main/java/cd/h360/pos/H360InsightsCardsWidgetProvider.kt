@@ -53,11 +53,22 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
             val salesChangePct = if (prefs.contains(H360WidgetUpdater.KEY_SALES_CHANGE_PCT)) {
                 prefs.getInt(H360WidgetUpdater.KEY_SALES_CHANGE_PCT, 0)
             } else null
+            val salesWeekChangePct = if (prefs.contains(H360WidgetUpdater.KEY_SALES_CHANGE_WEEK_PCT)) {
+                prefs.getInt(H360WidgetUpdater.KEY_SALES_CHANGE_WEEK_PCT, 0)
+            } else null
+            val avgTicketChangePct = if (prefs.contains(H360WidgetUpdater.KEY_AVG_TICKET_CHANGE_PCT)) {
+                prefs.getInt(H360WidgetUpdater.KEY_AVG_TICKET_CHANGE_PCT, 0)
+            } else null
             val lastSaleMinutes = if (prefs.contains(H360WidgetUpdater.KEY_LAST_SALE_MINUTES)) {
                 prefs.getInt(H360WidgetUpdater.KEY_LAST_SALE_MINUTES, 0)
             } else null
             val topProductName = prefs.getString(H360WidgetUpdater.KEY_TOP_PRODUCT_NAME, "") ?: ""
             val topProductQty = prefs.getInt(H360WidgetUpdater.KEY_TOP_PRODUCT_QTY, 0)
+            val topProductChangePct = if (prefs.contains(H360WidgetUpdater.KEY_TOP_PRODUCT_CHANGE_PCT)) {
+                prefs.getInt(H360WidgetUpdater.KEY_TOP_PRODUCT_CHANGE_PCT, 0)
+            } else null
+            val trendHint = prefs.getString(H360WidgetUpdater.KEY_TREND_HINT, "") ?: ""
+            val suggestedAction = prefs.getString(H360WidgetUpdater.KEY_SUGGESTED_ACTION, "") ?: ""
             val salesTrend = prefs.getString(H360WidgetUpdater.KEY_SALES_TREND, "Stable") ?: "Stable"
             val lowStock = prefs.getInt(H360WidgetUpdater.KEY_LOW_STOCK, 0)
             val mismatch = prefs.getInt(H360WidgetUpdater.KEY_STOCK_MISMATCH, 0)
@@ -91,10 +102,23 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                     " (${sign}${salesChangePct}%)"
                 }
                 val safeSalesWithChange = if (safeSalesChange.isNotBlank()) "$safeSalesToday$safeSalesChange" else safeSalesToday
+                val safeSalesWeekChange = if (blocked || salesWeekChangePct == null) "" else {
+                    val sign = if (salesWeekChangePct > 0) "+" else ""
+                    " (${sign}${salesWeekChangePct}% vs S-1)"
+                }
+                val safeSalesWithWeek = if (safeSalesWeekChange.isNotBlank()) "$safeSalesToday$safeSalesWeekChange" else safeSalesToday
+                val safeAvgTicketChange = if (blocked || avgTicketChangePct == null) "" else {
+                    val sign = if (avgTicketChangePct > 0) "+" else ""
+                    " ${sign}${avgTicketChangePct}%"
+                }
                 val safeLastSale = if (blocked || lastSaleMinutes == null) "--" else "${lastSaleMinutes} min"
                 val safeTopProduct = if (blocked || topProductName.isBlank()) "--" else {
                     val qty = if (topProductQty > 0) " (${topProductQty})" else ""
                     "${topProductName}$qty"
+                }
+                val safeTopChange = if (blocked || topProductChangePct == null) "" else {
+                    val sign = if (topProductChangePct > 0) "+" else ""
+                    " ${sign}${topProductChangePct}%"
                 }
                 val safeLowStock = if (blocked) "--" else lowStock.toString()
                 val safeMismatch = if (blocked) "--" else mismatch.toString()
@@ -104,11 +128,14 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                 val safeCollection = if (blocked) "--" else collection
                 val safeTrend = if (blocked) "--" else salesTrend
 
+                val safeTip = if (blocked || trendHint.isBlank()) "" else "${context.getString(R.string.insights_tip_prefix)} $trendHint"
+                val safeAction = if (blocked || suggestedAction.isBlank()) "" else suggestedAction
+
                 val kpis: List<Pair<String, String>> = when (cat) {
                     CATEGORY_STOCK -> listOf(
                         context.getString(R.string.insights_kpi_low_stock) to safeLowStock,
                         context.getString(R.string.insights_kpi_mismatch) to safeMismatch,
-                        context.getString(R.string.insights_kpi_top_product) to safeTopProduct,
+                        context.getString(R.string.insights_kpi_top_product) to "${safeTopProduct}${safeTopChange}",
                         context.getString(R.string.insights_kpi_last_sale) to safeLastSale
                     )
                     CATEGORY_HEALTH -> listOf(
@@ -118,12 +145,15 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                         context.getString(R.string.insights_kpi_collection) to safeCollection
                     )
                     else -> listOf(
-                        context.getString(R.string.insights_kpi_sales_today) to safeSalesWithChange,
-                        context.getString(R.string.insights_kpi_tickets_avg) to "${safeTicketsToday} | ${safeAvgTicket}",
+                        context.getString(R.string.insights_kpi_sales_today) to safeSalesWithWeek,
+                        context.getString(R.string.insights_kpi_tickets_avg) to "${safeTicketsToday} | ${safeAvgTicket}${safeAvgTicketChange}",
                         context.getString(R.string.insights_kpi_last_sale) to safeLastSale,
                         context.getString(R.string.insights_kpi_low_stock) to safeLowStock
                     )
                 }
+
+                views.setTextViewText(R.id.widgetInsightTip, safeTip.ifBlank { safeAction })
+                views.setViewVisibility(R.id.widgetInsightTip, if (safeTip.isNotBlank() || safeAction.isNotBlank()) android.view.View.VISIBLE else android.view.View.GONE)
 
                 views.setTextViewText(R.id.card1Label, kpis[0].first)
                 views.setTextViewText(R.id.card1Value, kpis[0].second)

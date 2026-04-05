@@ -83,6 +83,14 @@
         android:scaleType="fitXY"
         android:contentDescription="@string/insights_chart_desc" />
 
+    <TextView
+        android:id="@+id/widgetInsightTip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#8FD19E"
+        android:textSize="11sp" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

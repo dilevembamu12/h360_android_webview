@@ -39,9 +39,14 @@ object H360WidgetUpdater {
     const val KEY_TICKETS_TODAY = "tickets_today"
     const val KEY_AVG_TICKET = "avg_ticket"
     const val KEY_SALES_CHANGE_PCT = "sales_change_pct"
+    const val KEY_SALES_CHANGE_WEEK_PCT = "sales_change_week_pct"
+    const val KEY_AVG_TICKET_CHANGE_PCT = "avg_ticket_change_pct"
     const val KEY_LAST_SALE_MINUTES = "last_sale_minutes"
     const val KEY_TOP_PRODUCT_NAME = "top_product_name"
     const val KEY_TOP_PRODUCT_QTY = "top_product_qty"
+    const val KEY_TOP_PRODUCT_CHANGE_PCT = "top_product_change_pct"
+    const val KEY_TREND_HINT = "trend_hint"
+    const val KEY_SUGGESTED_ACTION = "suggested_action"
     const val KEY_LOW_STOCK = "low_stock"
     const val KEY_STOCK_MISMATCH = "stock_mismatch"
     const val KEY_COPILOT_LAST_PROMPT = "copilot_last_prompt"
@@ -144,6 +149,23 @@ object H360WidgetUpdater {
             editor.remove(KEY_TOP_PRODUCT_NAME)
             editor.remove(KEY_TOP_PRODUCT_QTY)
         }
+        editor.apply()
+    }
+
+    fun rememberSalesV2Extras(
+        context: Context,
+        weekChangePct: Int?,
+        avgTicketChangePct: Int?,
+        topProductChangePct: Int?,
+        trendHint: String?,
+        suggestedAction: String?
+    ) {
+        val editor = prefs(context).edit()
+        if (weekChangePct != null) editor.putInt(KEY_SALES_CHANGE_WEEK_PCT, weekChangePct) else editor.remove(KEY_SALES_CHANGE_WEEK_PCT)
+        if (avgTicketChangePct != null) editor.putInt(KEY_AVG_TICKET_CHANGE_PCT, avgTicketChangePct) else editor.remove(KEY_AVG_TICKET_CHANGE_PCT)
+        if (topProductChangePct != null) editor.putInt(KEY_TOP_PRODUCT_CHANGE_PCT, topProductChangePct) else editor.remove(KEY_TOP_PRODUCT_CHANGE_PCT)
+        if (!trendHint.isNullOrBlank()) editor.putString(KEY_TREND_HINT, trendHint.trim()) else editor.remove(KEY_TREND_HINT)
+        if (!suggestedAction.isNullOrBlank()) editor.putString(KEY_SUGGESTED_ACTION, suggestedAction.trim()) else editor.remove(KEY_SUGGESTED_ACTION)
         editor.apply()
     }
 
@@ -385,6 +407,14 @@ object H360WidgetUpdater {
                 if (sales.has("last_sale_minutes")) sales.optInt("last_sale_minutes") else null,
                 sales.optString("top_product_name", "").ifBlank { null },
                 if (sales.has("top_product_qty")) sales.optInt("top_product_qty") else null
+            )
+            rememberSalesV2Extras(
+                context,
+                if (sales.has("sales_change_week_pct")) sales.optInt("sales_change_week_pct") else null,
+                if (sales.has("avg_ticket_change_pct")) sales.optInt("avg_ticket_change_pct") else null,
+                if (sales.has("top_product_change_pct")) sales.optInt("top_product_change_pct") else null,
+                sales.optString("trend_hint", "").ifBlank { null },
+                sales.optString("suggested_action", "").ifBlank { null }
             )
             val seriesArray = sales.optJSONArray("series")
             if (seriesArray != null) {
