@@ -11,7 +11,9 @@ import android.webkit.CookieManager
 import android.widget.RemoteViews
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Shader
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.net.HttpURLConnection
@@ -548,8 +550,8 @@ object H360WidgetUpdater {
         if (points.isEmpty()) return null
 
         val width = 320
-        val height = 60
-        val padding = 6f
+        val height = 64
+        val padding = 8f
         val max = points.maxOrNull() ?: 0f
         val min = points.minOrNull() ?: 0f
         val range = (max - min).takeIf { it > 0f } ?: 1f
@@ -559,15 +561,28 @@ object H360WidgetUpdater {
         canvas.drawColor(0xFF111A31.toInt())
 
         val paintLine = Paint().apply {
-            color = 0xFF3EE2A8.toInt()
-            strokeWidth = 3f
+            color = 0xFF5CC8FF.toInt()
+            strokeWidth = 2.5f
             isAntiAlias = true
             style = Paint.Style.STROKE
         }
         val paintFill = Paint().apply {
-            color = 0x553EE2A8
+            shader = LinearGradient(
+                0f,
+                padding,
+                0f,
+                height.toFloat(),
+                0x335CC8FF,
+                0x005CC8FF,
+                Shader.TileMode.CLAMP
+            )
             isAntiAlias = true
             style = Paint.Style.FILL
+        }
+        val paintBase = Paint().apply {
+            color = 0xFF22345A.toInt()
+            strokeWidth = 1f
+            isAntiAlias = true
         }
 
         val count = points.size
@@ -594,6 +609,7 @@ object H360WidgetUpdater {
         fillPath.lineTo(lastX, height - padding)
         fillPath.close()
 
+        canvas.drawLine(padding, height - padding, width - padding, height - padding, paintBase)
         canvas.drawPath(fillPath, paintFill)
         canvas.drawPath(linePath, paintLine)
         return bmp
