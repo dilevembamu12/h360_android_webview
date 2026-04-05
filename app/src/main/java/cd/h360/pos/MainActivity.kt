@@ -123,6 +123,9 @@ class MainActivity : AppCompatActivity() {
                 H360WidgetUpdater.rememberCopilotResponse(this, response)
                 H360CopilotWidgetProvider.refreshAll(this)
                 H360NotificationDispatcher.notifyCopilotResponse(this, response)
+            },
+            onPrintPage = {
+                runOnUiThread { printCurrentPage() }
             }
         )
     }
@@ -339,6 +342,7 @@ class MainActivity : AppCompatActivity() {
                             H360CopilotWidgetProvider.refreshAll(this@MainActivity)
                         }
                     }
+                    injectPrintHook(view)
                     H360WidgetUpdater.rememberLastPage(this@MainActivity, sanitizePath(url))
                     val inferredRole = inferRoleFromUrl(url)
                     if (inferredRole != null && inferredRole != readRole()) {
@@ -451,6 +455,22 @@ class MainActivity : AppCompatActivity() {
         val info = cm.activeNetworkInfo
         @Suppress("DEPRECATION")
         return info != null && info.isConnected
+    }
+
+    private fun injectPrintHook(view: WebView?) {
+        if (view == null) return
+        val script = """
+            (function() {
+                if (window.__h360PrintHooked) return;
+                window.__h360PrintHooked = true;
+                window.print = function() {
+                    if (window.H360Native && typeof window.H360Native.printPage === 'function') {
+                        window.H360Native.printPage();
+                    }
+                };
+            })();
+        """.trimIndent()
+        view.evaluateJavascript(script, null)
     }
 
     override fun onDestroy() {
@@ -578,7 +598,8 @@ private class H360JsBridge(
     private val onStockInsights: (Int, Int) -> Unit,
     private val onFinanceInsights: (String, String, Int, String) -> Unit,
     private val onSalesTrend: (String) -> Unit,
-    private val onCopilotResponse: (String) -> Unit
+    private val onCopilotResponse: (String) -> Unit,
+    private val onPrintPage: () -> Unit
 ) {
     @JavascriptInterface
     fun setRole(role: String?) {
@@ -647,5 +668,10 @@ private class H360JsBridge(
         if (safeText.isNotBlank()) {
             onCopilotResponse(safeText)
         }
+    }
+
+    @JavascriptInterface
+    fun printPage() {
+        onPrintPage()
     }
 }
