@@ -38,6 +38,10 @@ object H360WidgetUpdater {
     const val KEY_SALES_TODAY = "sales_today"
     const val KEY_TICKETS_TODAY = "tickets_today"
     const val KEY_AVG_TICKET = "avg_ticket"
+    const val KEY_SALES_CHANGE_PCT = "sales_change_pct"
+    const val KEY_LAST_SALE_MINUTES = "last_sale_minutes"
+    const val KEY_TOP_PRODUCT_NAME = "top_product_name"
+    const val KEY_TOP_PRODUCT_QTY = "top_product_qty"
     const val KEY_LOW_STOCK = "low_stock"
     const val KEY_STOCK_MISMATCH = "stock_mismatch"
     const val KEY_COPILOT_LAST_PROMPT = "copilot_last_prompt"
@@ -113,6 +117,34 @@ object H360WidgetUpdater {
             .putInt(KEY_TICKETS_TODAY, ticketsToday.coerceAtLeast(0))
             .putString(KEY_AVG_TICKET, avgTicket.ifBlank { "0" })
             .apply()
+    }
+
+    fun rememberSalesExtras(
+        context: Context,
+        changePct: Int?,
+        lastSaleMinutes: Int?,
+        topProductName: String?,
+        topProductQty: Int?
+    ) {
+        val editor = prefs(context).edit()
+        if (changePct != null) {
+            editor.putInt(KEY_SALES_CHANGE_PCT, changePct)
+        } else {
+            editor.remove(KEY_SALES_CHANGE_PCT)
+        }
+        if (lastSaleMinutes != null) {
+            editor.putInt(KEY_LAST_SALE_MINUTES, lastSaleMinutes.coerceAtLeast(0))
+        } else {
+            editor.remove(KEY_LAST_SALE_MINUTES)
+        }
+        if (!topProductName.isNullOrBlank()) {
+            editor.putString(KEY_TOP_PRODUCT_NAME, topProductName.trim())
+            editor.putInt(KEY_TOP_PRODUCT_QTY, topProductQty ?: 0)
+        } else {
+            editor.remove(KEY_TOP_PRODUCT_NAME)
+            editor.remove(KEY_TOP_PRODUCT_QTY)
+        }
+        editor.apply()
     }
 
     fun rememberStockInsights(context: Context, lowStock: Int, stockMismatch: Int) {
@@ -347,6 +379,13 @@ object H360WidgetUpdater {
                 sales.optString("avg_ticket", "0")
             )
             rememberSalesTrend(context, sales.optString("sales_trend", "Stable"))
+            rememberSalesExtras(
+                context,
+                if (sales.has("sales_change_pct")) sales.optInt("sales_change_pct") else null,
+                if (sales.has("last_sale_minutes")) sales.optInt("last_sale_minutes") else null,
+                sales.optString("top_product_name", "").ifBlank { null },
+                if (sales.has("top_product_qty")) sales.optInt("top_product_qty") else null
+            )
             val seriesArray = sales.optJSONArray("series")
             if (seriesArray != null) {
                 val series = mutableListOf<Double>()

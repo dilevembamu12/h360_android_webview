@@ -69,6 +69,7 @@
     <string name="insights_tab_health">Sante</string>
     <string name="insights_kpi_sales_today">CA JOUR</string>
     <string name="insights_kpi_tickets">TICKETS</string>
+    <string name="insights_kpi_tickets_avg">TICKETS / PANIER</string>
     <string name="insights_kpi_avg_ticket">PANIER</string>
     <string name="insights_kpi_sales_trend">TENDANCE</string>
     <string name="insights_kpi_low_stock">STOCK BAS</string>
@@ -77,6 +78,8 @@
     <string name="insights_kpi_expense">DEPENSE JOUR</string>
     <string name="insights_kpi_overdue">FACTURES DUES</string>
     <string name="insights_kpi_collection">TAUX COLLECTE</string>
+    <string name="insights_kpi_last_sale">DERNIERE VENTE</string>
+    <string name="insights_kpi_top_product">TOP PRODUIT</string>
     <string name="insights_refresh">↻</string>
     <string name="insights_open_dashboard">Ouvrir dashboard</string>
     <string name="insights_chart_desc">Tendance des ventes</string>

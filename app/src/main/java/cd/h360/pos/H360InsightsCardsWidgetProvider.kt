@@ -50,6 +50,14 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
             val salesToday = prefs.getString(H360WidgetUpdater.KEY_SALES_TODAY, "0") ?: "0"
             val ticketsToday = prefs.getInt(H360WidgetUpdater.KEY_TICKETS_TODAY, 0)
             val avgTicket = prefs.getString(H360WidgetUpdater.KEY_AVG_TICKET, "0") ?: "0"
+            val salesChangePct = if (prefs.contains(H360WidgetUpdater.KEY_SALES_CHANGE_PCT)) {
+                prefs.getInt(H360WidgetUpdater.KEY_SALES_CHANGE_PCT, 0)
+            } else null
+            val lastSaleMinutes = if (prefs.contains(H360WidgetUpdater.KEY_LAST_SALE_MINUTES)) {
+                prefs.getInt(H360WidgetUpdater.KEY_LAST_SALE_MINUTES, 0)
+            } else null
+            val topProductName = prefs.getString(H360WidgetUpdater.KEY_TOP_PRODUCT_NAME, "") ?: ""
+            val topProductQty = prefs.getInt(H360WidgetUpdater.KEY_TOP_PRODUCT_QTY, 0)
             val salesTrend = prefs.getString(H360WidgetUpdater.KEY_SALES_TREND, "Stable") ?: "Stable"
             val lowStock = prefs.getInt(H360WidgetUpdater.KEY_LOW_STOCK, 0)
             val mismatch = prefs.getInt(H360WidgetUpdater.KEY_STOCK_MISMATCH, 0)
@@ -78,6 +86,16 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                 val safeSalesToday = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, salesToday)
                 val safeTicketsToday = if (blocked) "--" else ticketsToday.toString()
                 val safeAvgTicket = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, avgTicket)
+                val safeSalesChange = if (blocked || salesChangePct == null) "" else {
+                    val sign = if (salesChangePct > 0) "+" else ""
+                    " (${sign}${salesChangePct}%)"
+                }
+                val safeSalesWithChange = if (safeSalesChange.isNotBlank()) "$safeSalesToday$safeSalesChange" else safeSalesToday
+                val safeLastSale = if (blocked || lastSaleMinutes == null) "--" else "${lastSaleMinutes} min"
+                val safeTopProduct = if (blocked || topProductName.isBlank()) "--" else {
+                    val qty = if (topProductQty > 0) " (${topProductQty})" else ""
+                    "${topProductName}$qty"
+                }
                 val safeLowStock = if (blocked) "--" else lowStock.toString()
                 val safeMismatch = if (blocked) "--" else mismatch.toString()
                 val safeExpense = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, expense)
@@ -90,8 +108,8 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                     CATEGORY_STOCK -> listOf(
                         context.getString(R.string.insights_kpi_low_stock) to safeLowStock,
                         context.getString(R.string.insights_kpi_mismatch) to safeMismatch,
-                        context.getString(R.string.insights_kpi_tickets) to safeTicketsToday,
-                        context.getString(R.string.insights_kpi_sales_trend) to safeTrend
+                        context.getString(R.string.insights_kpi_top_product) to safeTopProduct,
+                        context.getString(R.string.insights_kpi_last_sale) to safeLastSale
                     )
                     CATEGORY_HEALTH -> listOf(
                         context.getString(R.string.insights_kpi_profit) to safeProfit,
@@ -100,10 +118,10 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                         context.getString(R.string.insights_kpi_collection) to safeCollection
                     )
                     else -> listOf(
-                        context.getString(R.string.insights_kpi_sales_today) to safeSalesToday,
-                        context.getString(R.string.insights_kpi_tickets) to safeTicketsToday,
-                        context.getString(R.string.insights_kpi_avg_ticket) to safeAvgTicket,
-                        context.getString(R.string.insights_kpi_sales_trend) to safeTrend
+                        context.getString(R.string.insights_kpi_sales_today) to safeSalesWithChange,
+                        context.getString(R.string.insights_kpi_tickets_avg) to "${safeTicketsToday} | ${safeAvgTicket}",
+                        context.getString(R.string.insights_kpi_last_sale) to safeLastSale,
+                        context.getString(R.string.insights_kpi_low_stock) to safeLowStock
                     )
                 }
 
