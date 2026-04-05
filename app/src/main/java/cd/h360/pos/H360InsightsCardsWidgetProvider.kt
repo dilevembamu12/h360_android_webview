@@ -146,7 +146,7 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
         }
 
         private fun openInsightsPage(context: Context): PendingIntent {
-            val base = BuildConfig.WEBVIEW_BASE_URL.trim().ifBlank { "https://pos.h360.cd" }
+            val base = BuildConfig.WEBVIEW_BASE_URL.trim().ifBlank { "https://stack.git.h360.cd" }
             val normalized = if (base.endsWith("/")) base.dropLast(1) else base
             val intent = Intent(
                 Intent.ACTION_VIEW,
