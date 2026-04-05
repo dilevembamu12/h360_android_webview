@@ -207,6 +207,15 @@ object H360WidgetUpdater {
                     rememberRemoteSyncState(context, "auth_required", "Session expiree: reconnecte-toi")
                     return
                 }
+                result.code == -1 -> {
+                    val detail = result.body.trim()
+                    lastError = if (detail.isNotEmpty()) {
+                        "API insights offline: $detail"
+                    } else {
+                        "API insights offline"
+                    }
+                    Log.w(TAG, "Insights endpoint failed: $url error=${result.body}")
+                }
                 result.code == HttpURLConnection.HTTP_NOT_FOUND -> {
                     lastError = "API insights HTTP 404"
                     Log.w(TAG, "Insights endpoint not found: $url")
