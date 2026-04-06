@@ -3,6 +3,6 @@
     android:minWidth="180dp"
     android:minHeight="110dp"
     android:updatePeriodMillis="1800000"
-    android:initialLayout="@layout/widget_h360_status"
+    android:initialLayout="@layout/widget_h360_status_fallback"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

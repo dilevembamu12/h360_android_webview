@@ -495,7 +495,11 @@ object H360WidgetUpdater {
         val salesTodayDisplay = formatMoneyDisplay(context, salesToday)
         val avgTicketDisplay = formatMoneyDisplay(context, avgTicket)
 
-        val views = RemoteViews(context.packageName, R.layout.widget_h360_status)
+        val views = try {
+            RemoteViews(context.packageName, R.layout.widget_h360_status)
+        } catch (_: Exception) {
+            RemoteViews(context.packageName, R.layout.widget_h360_status_fallback)
+        }
         views.setTextViewText(R.id.widgetRoleValue, role.uppercase())
         views.setTextViewText(R.id.widgetPendingValue, pending.toString())
         views.setTextViewText(R.id.widgetLastSyncValue, lastSync)
