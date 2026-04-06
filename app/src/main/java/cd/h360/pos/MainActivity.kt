@@ -352,6 +352,7 @@ class MainActivity : AppCompatActivity() {
                     if (url.startsWith(appOrigin) && !url.contains("/login")) {
                         H360WidgetUpdater.refreshFromRemoteIfDue(this@MainActivity, force = true)
                     }
+                    applyOfflineUiTuning(view, url)
                 }
                 H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
                 super.onPageFinished(view, url)
@@ -455,6 +456,35 @@ class MainActivity : AppCompatActivity() {
         val info = cm.activeNetworkInfo
         @Suppress("DEPRECATION")
         return info != null && info.isConnected
+    }
+
+    private fun applyOfflineUiTuning(view: WebView?, url: String) {
+        if (view == null) return
+        if (!url.contains("/h360offline")) return
+        binding.toolbar.title = getString(R.string.shortcut_offline)
+        val css = """
+            body { background: #0A172B !important; color: #E6F0FF !important; font-size: 15px !important; }
+            .container, .container-fluid { max-width: 980px !important; margin: 0 auto !important; padding: 16px !important; }
+            .card, .panel, .box, .well { background: #111E36 !important; border: 1px solid #1F3153 !important; border-radius: 12px !important; }
+            .card-header, .panel-heading, .box-header { background: #14284A !important; color: #E6F0FF !important; border-bottom: 1px solid #1F3153 !important; }
+            .btn, .button, button, input[type='submit'] { border-radius: 10px !important; padding: 10px 14px !important; font-weight: 600 !important; }
+            .btn-primary, .button-primary { background: #2E7CF6 !important; border-color: #2E7CF6 !important; }
+            .btn-success { background: #1FBF8E !important; border-color: #1FBF8E !important; }
+            .table { color: #E6F0FF !important; }
+            .table thead th { background: #14284A !important; color: #E6F0FF !important; }
+            .badge, .label { border-radius: 999px !important; padding: 4px 8px !important; }
+            input, select, textarea { background: #0F1C33 !important; color: #E6F0FF !important; border: 1px solid #253B63 !important; border-radius: 10px !important; }
+        """.trimIndent()
+        val script = """
+            (function() {
+                if (document.getElementById('h360-offline-style')) return;
+                var style = document.createElement('style');
+                style.id = 'h360-offline-style';
+                style.innerHTML = ${'"'}$css${'"'};
+                document.head.appendChild(style);
+            })();
+        """.trimIndent()
+        view.evaluateJavascript(script, null)
     }
 
     private fun injectPrintHook(view: WebView?) {
