@@ -130,6 +130,7 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
 
                 val safeTip = if (blocked || trendHint.isBlank()) "" else "${context.getString(R.string.insights_tip_prefix)} $trendHint"
                 val safeAction = if (blocked || suggestedAction.isBlank()) "" else suggestedAction
+                val tipText = safeTip.ifBlank { safeAction }
 
                 val kpis: List<Pair<String, String>> = when (cat) {
                     CATEGORY_STOCK -> listOf(
@@ -151,9 +152,19 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                         context.getString(R.string.insights_kpi_low_stock) to safeLowStock
                     )
                 }
-
-                views.setTextViewText(R.id.widgetInsightTip, safeTip.ifBlank { safeAction })
-                views.setViewVisibility(R.id.widgetInsightTip, if (safeTip.isNotBlank() || safeAction.isNotBlank()) android.view.View.VISIBLE else android.view.View.GONE)
+                if (tipText.isNotBlank()) {
+                    val tipColor = when {
+                        safeAction.contains("Nouvelle vente", ignoreCase = true) -> 0xFFFFD166.toInt()
+                        salesWeekChangePct != null && salesWeekChangePct < 0 -> 0xFFFF8FA3.toInt()
+                        trendHint.contains("Baisse", ignoreCase = true) -> 0xFFFF8FA3.toInt()
+                        else -> 0xFF8FD19E.toInt()
+                    }
+                    views.setTextViewText(R.id.widgetInsightTip, tipText)
+                    views.setTextColor(R.id.widgetInsightTip, tipColor)
+                    views.setViewVisibility(R.id.widgetInsightTip, android.view.View.VISIBLE)
+                } else {
+                    views.setViewVisibility(R.id.widgetInsightTip, android.view.View.GONE)
+                }
 
                 views.setTextViewText(R.id.card1Label, kpis[0].first)
                 views.setTextViewText(R.id.card1Value, kpis[0].second)

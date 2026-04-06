@@ -252,12 +252,24 @@ object H360WidgetUpdater {
         val widgetIds = appWidgetManager.getAppWidgetIds(widgetComponent)
         if (widgetIds.isNotEmpty()) {
             widgetIds.forEach { widgetId ->
-                val views = buildRemoteViews(context)
-                appWidgetManager.updateAppWidget(widgetId, views)
+                try {
+                    val views = buildRemoteViews(context)
+                    appWidgetManager.updateAppWidget(widgetId, views)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Status widget update failed id=$widgetId", e)
+                }
             }
         }
-        H360CopilotWidgetProvider.refreshAll(context)
-        H360InsightsCardsWidgetProvider.refreshAll(context)
+        try {
+            H360CopilotWidgetProvider.refreshAll(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Copilot widget update failed", e)
+        }
+        try {
+            H360InsightsCardsWidgetProvider.refreshAll(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Insights widget update failed", e)
+        }
     }
 
     private fun fetchAndStoreRemoteInsights(context: Context) {
