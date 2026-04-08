@@ -12,6 +12,7 @@ import android.widget.RemoteViews
 class H360CopilotWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
         refreshAll(context)
     }
 
@@ -33,7 +34,14 @@ class H360CopilotWidgetProvider : AppWidgetProvider() {
                 context.startActivity(activityIntent)
             }
         }
+        H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
         refreshAll(context)
+    }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
+        H360WidgetUpdater.scheduleRealtimeRefresh(context)
     }
 
     companion object {
@@ -47,8 +55,10 @@ class H360CopilotWidgetProvider : AppWidgetProvider() {
             if (ids.isEmpty()) return
 
             val prefs = context.getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
-            val lastPrompt = prefs.getString(H360WidgetUpdater.KEY_COPILOT_LAST_PROMPT, "-") ?: "-"
-            val lastResponse = prefs.getString(H360WidgetUpdater.KEY_COPILOT_LAST_RESPONSE, "-") ?: "-"
+            val lastPrompt = prefs.getString(H360WidgetUpdater.KEY_COPILOT_LAST_PROMPT, "").orEmpty()
+                .ifBlank { context.getString(R.string.copilot_placeholder_prompt) }
+            val lastResponse = prefs.getString(H360WidgetUpdater.KEY_COPILOT_LAST_RESPONSE, "").orEmpty()
+                .ifBlank { context.getString(R.string.copilot_placeholder_response) }
 
             ids.forEach { widgetId ->
                 val views = RemoteViews(context.packageName, R.layout.widget_h360_copilot)
@@ -57,15 +67,15 @@ class H360CopilotWidgetProvider : AppWidgetProvider() {
 
                 views.setOnClickPendingIntent(
                     R.id.widgetPromptSales,
-                    quickPromptPendingIntent(context, "Resume les ventes du jour", 301)
+                    openCopilotWithPromptPendingIntent(context, "Resume les ventes du jour", 301)
                 )
                 views.setOnClickPendingIntent(
                     R.id.widgetPromptStock,
-                    quickPromptPendingIntent(context, "Donne les alertes stock critiques", 302)
+                    openCopilotWithPromptPendingIntent(context, "Donne les alertes stock critiques", 302)
                 )
                 views.setOnClickPendingIntent(
                     R.id.widgetPromptMismatch,
-                    quickPromptPendingIntent(context, "Explique les mismatch stock", 303)
+                    openCopilotWithPromptPendingIntent(context, "Explique les mismatch stock", 303)
                 )
                 views.setOnClickPendingIntent(
                     R.id.widgetBtnOpenChat,
@@ -74,6 +84,19 @@ class H360CopilotWidgetProvider : AppWidgetProvider() {
 
                 manager.updateAppWidget(widgetId, views)
             }
+        }
+
+        private fun openCopilotWithPromptPendingIntent(context: Context, prompt: String, requestCode: Int): PendingIntent {
+            val uri = Uri.parse("h360://shortcut/copilot?prompt=${Uri.encode(prompt)}")
+            val intent = Intent(Intent.ACTION_VIEW, uri, context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            return PendingIntent.getActivity(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
         }
 
         private fun quickPromptPendingIntent(context: Context, prompt: String, requestCode: Int): PendingIntent {

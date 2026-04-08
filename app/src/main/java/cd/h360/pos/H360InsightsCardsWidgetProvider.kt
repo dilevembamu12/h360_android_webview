@@ -12,6 +12,7 @@ import android.widget.RemoteViews
 class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
         refreshAll(context)
     }
 
@@ -23,7 +24,14 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
             ACTION_CATEGORY_HEALTH -> setCategory(context, CATEGORY_HEALTH)
             ACTION_REFRESH -> H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
         }
+        H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
         refreshAll(context)
+    }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
+        H360WidgetUpdater.scheduleRealtimeRefresh(context)
     }
 
     companion object {

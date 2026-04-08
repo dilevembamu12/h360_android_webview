@@ -63,6 +63,8 @@
     <string name="copilot_widget_title">H360 Copilot Widget</string>
     <string name="copilot_last_prompt">Dernier prompt</string>
     <string name="copilot_last_response">Derniere reponse</string>
+    <string name="copilot_placeholder_prompt">Appuie sur un bouton pour lancer un prompt</string>
+    <string name="copilot_placeholder_response">La reponse Copilot apparaitra ici</string>
     <string name="copilot_quick_sales">Ventes</string>
     <string name="copilot_quick_stock">Stock</string>
     <string name="copilot_quick_mismatch">Mismatch</string>

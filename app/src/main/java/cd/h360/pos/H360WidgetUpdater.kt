@@ -377,6 +377,8 @@ object H360WidgetUpdater {
             return
         }
 
+        runCatching { CookieManager.getInstance().flush() }
+
         networkExecutor.execute {
             try {
                 fetchAndStoreRemoteInsights(appContext)
@@ -478,8 +480,9 @@ object H360WidgetUpdater {
                 connectTimeout = 6000
                 readTimeout = 6000
                 setRequestProperty("Accept", "application/json")
+                setRequestProperty("X-Requested-With", "XMLHttpRequest")
             }
-            val cookie = CookieManager.getInstance().getCookie(finalUrl)
+            val cookie = collectCookieHeader(finalUrl)
             if (!cookie.isNullOrBlank()) {
                 conn.setRequestProperty("Cookie", cookie)
             }
@@ -493,6 +496,33 @@ object H360WidgetUpdater {
         } catch (e: Exception) {
             InsightHttpResult(-1, "", e.message.orEmpty())
         }
+    }
+
+    private fun collectCookieHeader(finalUrl: String): String {
+        val cm = CookieManager.getInstance()
+        val candidates = linkedSetOf<String>()
+        candidates.add(finalUrl)
+        val base = BuildConfig.WEBVIEW_BASE_URL.trim()
+        if (base.isNotBlank()) {
+            candidates.add(base)
+            val uri = Uri.parse(base)
+            val origin = "${uri.scheme}://${uri.host}"
+            candidates.add(origin)
+        }
+        val direct = cm.getCookie(finalUrl).orEmpty().trim()
+        if (direct.isNotBlank()) return direct
+
+        val merged = linkedSetOf<String>()
+        candidates.forEach { candidate ->
+            val cookie = cm.getCookie(candidate).orEmpty()
+            if (cookie.isNotBlank()) {
+                cookie.split(";")
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                    .forEach { merged.add(it) }
+            }
+        }
+        return merged.joinToString("; ")
     }
 
     private fun buildInsightsUrl(context: Context, baseUrl: String): String {

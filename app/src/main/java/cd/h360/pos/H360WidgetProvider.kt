@@ -19,4 +19,10 @@ class H360WidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         H360WidgetUpdater.refreshAllWidgets(context)
     }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        H360WidgetUpdater.refreshFromRemoteIfDue(context, force = true)
+        H360WidgetUpdater.scheduleRealtimeRefresh(context)
+    }
 }
