@@ -64,10 +64,11 @@ object H360WidgetUpdater {
     const val KEY_CURRENCY_SYMBOL = "currency_symbol"
     const val KEY_LAST_REMOTE_FETCH_MS = "last_remote_fetch_ms"
     private const val KEY_REMOTE_REFRESH_INTERVAL_SEC = "remote_refresh_interval_sec"
+    private const val KEY_WIDGET_REALTIME_INTERVAL_SEC = "widget_realtime_interval_sec"
     const val KEY_REMOTE_SYNC_STATE = "remote_sync_state"
     const val KEY_REMOTE_SYNC_MESSAGE = "remote_sync_message"
     private const val DEFAULT_REMOTE_REFRESH_INTERVAL_SEC = 300
-    private const val REALTIME_TICK_INTERVAL_MS = 60_000L
+    private const val DEFAULT_WIDGET_REALTIME_INTERVAL_SEC = 60
 
     private const val MODULE_SALES = "sales"
     private const val MODULE_STOCK = "stock"
@@ -114,6 +115,18 @@ object H360WidgetUpdater {
 
     fun rememberEnabledModules(context: Context, modules: Set<String>) {
         prefs(context).edit().putString(KEY_ENABLED_MODULES, modules.joinToString(",")).apply()
+    }
+
+    fun rememberRealtimeIntervalSec(context: Context, seconds: Int) {
+        val safe = seconds.coerceIn(30, 120)
+        prefs(context).edit().putInt(KEY_WIDGET_REALTIME_INTERVAL_SEC, safe).apply()
+        scheduleRealtimeRefresh(context.applicationContext)
+    }
+
+    fun readRealtimeIntervalSec(context: Context): Int {
+        return prefs(context)
+            .getInt(KEY_WIDGET_REALTIME_INTERVAL_SEC, DEFAULT_WIDGET_REALTIME_INTERVAL_SEC)
+            .coerceIn(30, 120)
     }
 
     fun readEnabledModules(context: Context): Set<String> {
@@ -233,7 +246,7 @@ object H360WidgetUpdater {
 
     fun scheduleRealtimeRefresh(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val triggerAt = SystemClock.elapsedRealtime() + REALTIME_TICK_INTERVAL_MS
+        val triggerAt = SystemClock.elapsedRealtime() + (readRealtimeIntervalSec(context) * 1000L)
         val pendingIntent = realtimeTickPendingIntent(context)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

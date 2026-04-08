@@ -37,6 +37,39 @@
         android:layout_height="wrap_content"
         android:text="@string/widget_module_activity" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:text="@string/widget_realtime_interval_title"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/realtimeIntervalGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/realtime30"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_realtime_interval_30s" />
+
+        <RadioButton
+            android:id="@+id/realtime60"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_realtime_interval_60s" />
+
+        <RadioButton
+            android:id="@+id/realtime120"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_realtime_interval_120s" />
+    </RadioGroup>
+
     <Button
         android:id="@+id/btnSave"
         android:layout_width="match_parent"
