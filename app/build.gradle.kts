@@ -17,18 +17,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // H360-CUSTOM-PATCH [H360_ANDROID_WEBVIEW_URL]
-        // Change this single value to point to another H360 environment.
-        buildConfigField("String", "WEBVIEW_BASE_URL", "\"https://stack.git.h360.cd/login\"")
-        buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd,stack.git.h360.cd\"")
+        // Default values (safe baseline). buildTypes below can override per variant.
+        buildConfigField("String", "WEBVIEW_BASE_URL", "\"https://pos.h360.cd/login\"")
+        buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd\"")
         buildConfigField("int", "SPLASH_DELAY_MS", "1200")
         buildConfigField("boolean", "ENABLE_KIOSK_MODE", "false")
-        buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://stack.git.h360.cd/h360offline/ping\"")
-        buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://stack.git.h360.cd/h360/widgets/insights\"")
+        buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://pos.h360.cd/h360offline/ping\"")
+        buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://pos.h360.cd/h360/widgets/insights\"")
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
+            // Production release must always target the public domain.
+            buildConfigField("String", "WEBVIEW_BASE_URL", "\"https://pos.h360.cd/login\"")
+            buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd\"")
+            buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://pos.h360.cd/h360offline/ping\"")
+            buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://pos.h360.cd/h360/widgets/insights\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -36,6 +41,11 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            // Debug remains on stack for internal testing.
+            buildConfigField("String", "WEBVIEW_BASE_URL", "\"https://stack.git.h360.cd/login\"")
+            buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd,stack.git.h360.cd\"")
+            buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://stack.git.h360.cd/h360offline/ping\"")
+            buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://stack.git.h360.cd/h360/widgets/insights\"")
         }
     }
 
