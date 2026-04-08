@@ -80,6 +80,8 @@ object H360WidgetUpdater {
     const val KEY_REMOTE_SYNC_MESSAGE = "remote_sync_message"
     const val KEY_REMOTE_DIAG_LABEL = "remote_diag_label"
     const val KEY_REMOTE_DIAG_DETAIL = "remote_diag_detail"
+    const val KEY_BACKEND_NOTIFICATIONS_JSON = "backend_notifications_json"
+    const val KEY_BACKEND_NOTIFICATIONS_UNREAD = "backend_notifications_unread"
     private const val DEFAULT_REMOTE_REFRESH_INTERVAL_SEC = 300
     private const val DEFAULT_WIDGET_REALTIME_INTERVAL_SEC = 60
 
@@ -192,6 +194,34 @@ object H360WidgetUpdater {
         } catch (_: Exception) {
             fallback
         }
+    }
+
+    private fun rememberBackendNotifications(context: Context, unreadTotal: Int, list: JSONArray) {
+        prefs(context).edit()
+            .putInt(KEY_BACKEND_NOTIFICATIONS_UNREAD, unreadTotal.coerceAtLeast(0))
+            .putString(KEY_BACKEND_NOTIFICATIONS_JSON, list.toString())
+            .apply()
+    }
+
+    private fun readBackendNotificationMessages(context: Context): List<String> {
+        val raw = prefs(context).getString(KEY_BACKEND_NOTIFICATIONS_JSON, "").orEmpty()
+        if (raw.isBlank()) return emptyList()
+        return try {
+            val arr = JSONArray(raw)
+            val out = mutableListOf<String>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.optJSONObject(i) ?: continue
+                val msg = obj.optString("message").trim()
+                if (msg.isNotBlank()) out.add(msg)
+            }
+            out
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun readBackendUnreadTotal(context: Context): Int {
+        return prefs(context).getInt(KEY_BACKEND_NOTIFICATIONS_UNREAD, 0).coerceAtLeast(0)
     }
 
     fun rememberRealtimeIntervalSec(context: Context, seconds: Int) {
@@ -423,6 +453,15 @@ object H360WidgetUpdater {
         } catch (e: Exception) {
             Log.e(TAG, "Advice widget update failed", e)
         }
+        try {
+            H360NotificationDispatcher.updatePersistentBackendNotifications(
+                context = context,
+                unreadTotal = readBackendUnreadTotal(context),
+                messages = readBackendNotificationMessages(context)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Backend center notification update failed", e)
+        }
     }
 
     private fun fetchAndStoreRemoteInsights(context: Context) {
@@ -481,6 +520,7 @@ object H360WidgetUpdater {
                     val json = JSONObject(result.body)
                     if (json.optJSONObject("insights") != null) {
                         applyRemoteInsights(context, json)
+                        fetchAndStoreBackendNotifications(context)
                         rememberRemoteDiagnostic(
                             context = context,
                             state = "ok",
@@ -606,6 +646,49 @@ object H360WidgetUpdater {
             urls.add("$origin/widgets/insights")
         }
         return urls.toList()
+    }
+
+    private fun candidateNotificationUrls(): List<String> {
+        val urls = linkedSetOf<String>()
+        val configured = BuildConfig.WIDGET_INSIGHTS_URL.trim()
+        if (configured.isNotBlank()) {
+            urls.add(configured.replace("/widgets/insights", "/widgets/notifications"))
+        }
+        val origin = runCatching {
+            val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
+            "${base.scheme}://${base.host}"
+        }.getOrNull()
+        if (!origin.isNullOrBlank()) {
+            urls.add("$origin/h360/widgets/notifications")
+            urls.add("$origin/home/widgets/notifications")
+            urls.add("$origin/widgets/notifications")
+        }
+        return urls.toList()
+    }
+
+    private fun fetchAndStoreBackendNotifications(context: Context) {
+        val urls = candidateNotificationUrls()
+        if (urls.isEmpty()) return
+
+        urls.forEach { url ->
+            val result = requestInsights(context, url)
+            if (result.code !in 200..299) return@forEach
+            if (!result.contentType.contains("application/json")) return@forEach
+            if (result.body.isBlank()) return@forEach
+            runCatching {
+                val json = JSONObject(result.body)
+                if (json.optString("status") != "ok") return@runCatching
+                val unread = json.optInt("unread_total", 0)
+                val list = json.optJSONArray("notifications_list") ?: JSONArray()
+                rememberBackendNotifications(context, unread, list)
+                H360NotificationDispatcher.updatePersistentBackendNotifications(
+                    context = context,
+                    unreadTotal = unread,
+                    messages = readBackendNotificationMessages(context)
+                )
+                return
+            }
+        }
     }
 
     private fun applyRemoteInsights(context: Context, json: JSONObject) {
