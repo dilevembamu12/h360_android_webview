@@ -57,8 +57,10 @@ class H360CopilotWidgetProvider : AppWidgetProvider() {
             val prefs = context.getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
             val lastPrompt = prefs.getString(H360WidgetUpdater.KEY_COPILOT_LAST_PROMPT, "").orEmpty()
                 .ifBlank { context.getString(R.string.copilot_placeholder_prompt) }
-            val lastResponse = prefs.getString(H360WidgetUpdater.KEY_COPILOT_LAST_RESPONSE, "").orEmpty()
+            val rawResponse = prefs.getString(H360WidgetUpdater.KEY_COPILOT_LAST_RESPONSE, "").orEmpty()
                 .ifBlank { context.getString(R.string.copilot_placeholder_response) }
+            val diag = prefs.getString(H360WidgetUpdater.KEY_REMOTE_DIAG_LABEL, "").orEmpty()
+            val lastResponse = if (diag.isBlank()) rawResponse else "$rawResponse\n$diag"
 
             ids.forEach { widgetId ->
                 val views = RemoteViews(context.packageName, R.layout.widget_h360_copilot)

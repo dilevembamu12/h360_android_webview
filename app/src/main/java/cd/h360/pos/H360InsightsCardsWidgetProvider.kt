@@ -54,6 +54,7 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
             val cat = prefs.getString(KEY_INSIGHTS_CATEGORY, CATEGORY_SALES) ?: CATEGORY_SALES
             val syncState = prefs.getString(H360WidgetUpdater.KEY_REMOTE_SYNC_STATE, "idle") ?: "idle"
             val syncMessage = prefs.getString(H360WidgetUpdater.KEY_REMOTE_SYNC_MESSAGE, "En attente de sync") ?: "En attente de sync"
+            val diagLabel = prefs.getString(H360WidgetUpdater.KEY_REMOTE_DIAG_LABEL, "").orEmpty()
             val hasSynced = prefs.getLong(H360WidgetUpdater.KEY_LAST_REMOTE_FETCH_MS, 0L) > 0L
             val periodLabel = prefs.getString(H360WidgetUpdater.KEY_INSIGHTS_PERIOD_LABEL, "") ?: ""
             val dateFrom = prefs.getString(H360WidgetUpdater.KEY_FILTER_DATE_FROM, "") ?: ""
@@ -112,7 +113,8 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                 val subtitle = listOf(syncMessage, periodText, locationName)
                     .filter { it.isNotBlank() }
                     .joinToString(" | ")
-                views.setTextViewText(R.id.widgetCardsSubtitle, subtitle)
+                val subtitleWithDiag = if (diagLabel.isNotBlank()) "$subtitle\n$diagLabel" else subtitle
+                views.setTextViewText(R.id.widgetCardsSubtitle, subtitleWithDiag)
                 views.setTextColor(
                     R.id.widgetCardsSubtitle,
                     if (syncState == "ok") 0xFF8FD19E.toInt() else 0xFFFFB4B4.toInt()

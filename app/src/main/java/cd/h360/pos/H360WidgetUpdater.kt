@@ -78,6 +78,8 @@ object H360WidgetUpdater {
     private const val KEY_WIDGET_REALTIME_INTERVAL_SEC = "widget_realtime_interval_sec"
     const val KEY_REMOTE_SYNC_STATE = "remote_sync_state"
     const val KEY_REMOTE_SYNC_MESSAGE = "remote_sync_message"
+    const val KEY_REMOTE_DIAG_LABEL = "remote_diag_label"
+    const val KEY_REMOTE_DIAG_DETAIL = "remote_diag_detail"
     private const val DEFAULT_REMOTE_REFRESH_INTERVAL_SEC = 300
     private const val DEFAULT_WIDGET_REALTIME_INTERVAL_SEC = 60
 
@@ -430,9 +432,25 @@ object H360WidgetUpdater {
         var lastError = "API insights indisponible"
         urls.forEach { url ->
             val result = requestInsights(context, url)
+            rememberRemoteDiagnostic(
+                context = context,
+                state = "attempt",
+                httpCode = result.code,
+                endpoint = result.endpoint,
+                hasCookie = result.hasCookie,
+                detail = ""
+            )
             when {
                 result.code == HttpURLConnection.HTTP_UNAUTHORIZED || result.code == HttpURLConnection.HTTP_FORBIDDEN -> {
                     rememberRemoteSyncState(context, "auth_required", "Session expiree: reconnecte-toi")
+                    rememberRemoteDiagnostic(
+                        context = context,
+                        state = "auth_required",
+                        httpCode = result.code,
+                        endpoint = result.endpoint,
+                        hasCookie = result.hasCookie,
+                        detail = "Session invalide"
+                    )
                     return
                 }
                 result.code == -1 -> {
@@ -463,11 +481,27 @@ object H360WidgetUpdater {
                     val json = JSONObject(result.body)
                     if (json.optJSONObject("insights") != null) {
                         applyRemoteInsights(context, json)
+                        rememberRemoteDiagnostic(
+                            context = context,
+                            state = "ok",
+                            httpCode = result.code,
+                            endpoint = result.endpoint,
+                            hasCookie = result.hasCookie,
+                            detail = "JSON OK"
+                        )
                         return
                     }
                     lastError = "JSON insights invalide"
                 }
             }
+            rememberRemoteDiagnostic(
+                context = context,
+                state = "error",
+                httpCode = result.code,
+                endpoint = result.endpoint,
+                hasCookie = result.hasCookie,
+                detail = lastError
+            )
         }
         rememberRemoteSyncState(context, "error", lastError)
     }
@@ -492,9 +526,21 @@ object H360WidgetUpdater {
                 val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                 stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             }.getOrDefault("")
-            InsightHttpResult(code, contentType, body)
+            InsightHttpResult(
+                code = code,
+                contentType = contentType,
+                body = body,
+                endpoint = finalUrl,
+                hasCookie = !cookie.isNullOrBlank()
+            )
         } catch (e: Exception) {
-            InsightHttpResult(-1, "", e.message.orEmpty())
+            InsightHttpResult(
+                code = -1,
+                contentType = "",
+                body = e.message.orEmpty(),
+                endpoint = url,
+                hasCookie = false
+            )
         }
     }
 
@@ -708,6 +754,27 @@ object H360WidgetUpdater {
             .apply()
     }
 
+    private fun rememberRemoteDiagnostic(
+        context: Context,
+        state: String,
+        httpCode: Int,
+        endpoint: String,
+        hasCookie: Boolean,
+        detail: String
+    ) {
+        val epPath = runCatching {
+            val uri = Uri.parse(endpoint)
+            val path = uri.path.orEmpty().ifBlank { endpoint }
+            if (uri.query.isNullOrBlank()) path else "$path?..."
+        }.getOrDefault(endpoint)
+        val code = if (httpCode > 0) httpCode.toString() else "--"
+        val label = "Diag: ${state.uppercase()} | HTTP:$code | cookie:${if (hasCookie) "ok" else "missing"} | ep:$epPath"
+        prefs(context).edit()
+            .putString(KEY_REMOTE_DIAG_LABEL, label.take(180))
+            .putString(KEY_REMOTE_DIAG_DETAIL, detail.take(180))
+            .apply()
+    }
+
     private fun buildRemoteViews(context: Context): RemoteViews {
         val prefs = prefs(context)
         val role = prefs.getString(KEY_ROLE, "guest") ?: "guest"
@@ -722,6 +789,7 @@ object H360WidgetUpdater {
         val rawLastUpdate = prefs.getString(KEY_LAST_UPDATE, context.getString(R.string.widget_not_available))
             ?: context.getString(R.string.widget_not_available)
         val lastUpdate = if (rawLastUpdate == "N/A") context.getString(R.string.widget_not_available) else rawLastUpdate
+        val diag = prefs.getString(KEY_REMOTE_DIAG_LABEL, "").orEmpty()
         val caps = prefs.getString(KEY_CAPABILITIES, "").orEmpty()
             .split(",")
             .map { it.trim().lowercase() }
@@ -751,7 +819,8 @@ object H360WidgetUpdater {
         views.setTextViewText(R.id.widgetStatusValue, onlineStatus)
         views.setTextViewText(R.id.widgetOpenCountValue, appOpens.toString())
         views.setTextViewText(R.id.widgetLastPageValue, lastPage)
-        views.setTextViewText(R.id.widgetLastUpdateValue, lastUpdate)
+        val lastUpdateWithDiag = if (diag.isNotBlank()) "$lastUpdate | $diag" else lastUpdate
+        views.setTextViewText(R.id.widgetLastUpdateValue, lastUpdateWithDiag)
         views.setTextViewText(R.id.widgetSalesTodayValue, salesTodayDisplay)
         views.setTextViewText(R.id.widgetTicketsTodayValue, ticketsToday.toString())
         views.setTextViewText(R.id.widgetAvgTicketValue, avgTicketDisplay)
@@ -952,6 +1021,8 @@ object H360WidgetUpdater {
     private data class InsightHttpResult(
         val code: Int,
         val contentType: String,
-        val body: String
+        val body: String,
+        val endpoint: String,
+        val hasCookie: Boolean
     )
 }

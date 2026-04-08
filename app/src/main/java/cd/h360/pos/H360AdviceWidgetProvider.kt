@@ -42,6 +42,7 @@ class H360AdviceWidgetProvider : AppWidgetProvider() {
             val prefs = context.getSharedPreferences(H360WidgetUpdater.PREFS_NAME, Context.MODE_PRIVATE)
             val syncMessage = prefs.getString(H360WidgetUpdater.KEY_REMOTE_SYNC_MESSAGE, "En attente de sync").orEmpty()
             val syncState = prefs.getString(H360WidgetUpdater.KEY_REMOTE_SYNC_STATE, "idle").orEmpty()
+            val diagLabel = prefs.getString(H360WidgetUpdater.KEY_REMOTE_DIAG_LABEL, "").orEmpty()
             val title = prefs.getString(H360WidgetUpdater.KEY_INSIGHTS_ADVICE_TITLE, context.getString(R.string.insights_advice_default_title))
                 .orEmpty()
                 .ifBlank { context.getString(R.string.insights_advice_default_title) }
@@ -53,7 +54,8 @@ class H360AdviceWidgetProvider : AppWidgetProvider() {
                 val views = RemoteViews(context.packageName, R.layout.widget_h360_advice)
                 views.setTextViewText(R.id.widgetAdviceTitle, title)
                 views.setTextViewText(R.id.widgetAdviceMessage, message)
-                views.setTextViewText(R.id.widgetAdviceFooter, syncMessage)
+                val footer = if (diagLabel.isBlank()) syncMessage else "$syncMessage\n$diagLabel"
+                views.setTextViewText(R.id.widgetAdviceFooter, footer)
                 views.setTextColor(
                     R.id.widgetAdviceFooter,
                     if (syncState == "ok") 0xFF8FD19E.toInt() else 0xFFFFB4B4.toInt()
