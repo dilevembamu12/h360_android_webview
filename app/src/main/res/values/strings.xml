@@ -50,6 +50,7 @@
     <string name="widget_module_stock">Module Stock</string>
     <string name="widget_module_offline">Module Offline</string>
     <string name="widget_module_activity">Module Activite</string>
+    <string name="widget_module_advice">Conseils IA cibles</string>
     <string name="widget_realtime_interval_title">Frequence actualisation temps reel</string>
     <string name="widget_realtime_interval_30s">Toutes les 30 secondes</string>
     <string name="widget_realtime_interval_60s">Toutes les 60 secondes (recommande)</string>

@@ -82,6 +82,7 @@ object H360WidgetUpdater {
     const val KEY_REMOTE_DIAG_DETAIL = "remote_diag_detail"
     const val KEY_BACKEND_NOTIFICATIONS_JSON = "backend_notifications_json"
     const val KEY_BACKEND_NOTIFICATIONS_UNREAD = "backend_notifications_unread"
+    const val KEY_ADVICE_ENABLED = "advice_enabled"
     private const val DEFAULT_REMOTE_REFRESH_INTERVAL_SEC = 300
     private const val DEFAULT_WIDGET_REALTIME_INTERVAL_SEC = 60
 
@@ -135,6 +136,14 @@ object H360WidgetUpdater {
 
     fun rememberEnabledModules(context: Context, modules: Set<String>) {
         prefs(context).edit().putString(KEY_ENABLED_MODULES, modules.joinToString(",")).apply()
+    }
+
+    fun rememberAdviceEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_ADVICE_ENABLED, enabled).apply()
+    }
+
+    fun readAdviceEnabled(context: Context): Boolean {
+        return prefs(context).getBoolean(KEY_ADVICE_ENABLED, true)
     }
 
     fun rememberWidgetFilters(
@@ -521,6 +530,7 @@ object H360WidgetUpdater {
                     if (json.optJSONObject("insights") != null) {
                         applyRemoteInsights(context, json)
                         fetchAndStoreBackendNotifications(context)
+                        fetchAndStoreAdvicePreference(context)
                         rememberRemoteDiagnostic(
                             context = context,
                             state = "ok",
@@ -666,6 +676,18 @@ object H360WidgetUpdater {
         return urls.toList()
     }
 
+    private fun candidateAdvicePreferenceUrls(): List<String> {
+        val urls = linkedSetOf<String>()
+        val origin = runCatching {
+            val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
+            "${base.scheme}://${base.host}"
+        }.getOrNull()
+        if (!origin.isNullOrBlank()) {
+            urls.add("$origin/h360/advice/preferences")
+        }
+        return urls.toList()
+    }
+
     private fun fetchAndStoreBackendNotifications(context: Context) {
         val urls = candidateNotificationUrls()
         if (urls.isEmpty()) return
@@ -686,6 +708,24 @@ object H360WidgetUpdater {
                     unreadTotal = unread,
                     messages = readBackendNotificationMessages(context)
                 )
+                return
+            }
+        }
+    }
+
+    private fun fetchAndStoreAdvicePreference(context: Context) {
+        val urls = candidateAdvicePreferenceUrls()
+        if (urls.isEmpty()) return
+
+        urls.forEach { url ->
+            val result = requestInsights(context, url)
+            if (result.code !in 200..299) return@forEach
+            if (!result.contentType.contains("application/json")) return@forEach
+            if (result.body.isBlank()) return@forEach
+            runCatching {
+                val json = JSONObject(result.body)
+                val pref = json.optJSONObject("preferences") ?: return@runCatching
+                rememberAdviceEnabled(context, pref.optBoolean("enabled", true))
                 return
             }
         }
@@ -832,7 +872,9 @@ object H360WidgetUpdater {
             .putInt(KEY_REMOTE_REFRESH_INTERVAL_SEC, refreshSec)
             .apply()
         rememberRemoteSyncState(context, "ok", "Sync OK")
-        H360NotificationDispatcher.notifyDailyAdvice(context, adviceTitleForNotif, adviceMessageForNotif)
+        if (readAdviceEnabled(context)) {
+            H360NotificationDispatcher.notifyDailyAdvice(context, adviceTitleForNotif, adviceMessageForNotif)
+        }
 
         renderWidgets(context)
     }

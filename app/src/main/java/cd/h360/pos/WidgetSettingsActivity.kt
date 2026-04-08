@@ -30,6 +30,7 @@ class WidgetSettingsActivity : AppCompatActivity() {
         binding.switchStock.isChecked = selected.contains("stock")
         binding.switchOffline.isChecked = selected.contains("offline")
         binding.switchActivity.isChecked = selected.contains("activity")
+        binding.switchAdvice.isChecked = H360WidgetUpdater.readAdviceEnabled(this)
         when (H360WidgetUpdater.readRealtimeIntervalSec(this)) {
             30 -> binding.realtime30.isChecked = true
             120 -> binding.realtime120.isChecked = true
@@ -70,6 +71,7 @@ class WidgetSettingsActivity : AppCompatActivity() {
                 ?: H360WidgetUpdater.LocationOption(0, getString(R.string.widget_all_locations))
             val start = normalizeDate(binding.dateFromInput.text?.toString())
             val end = normalizeDate(binding.dateToInput.text?.toString())
+            val adviceEnabled = binding.switchAdvice.isChecked
 
             H360WidgetUpdater.rememberEnabledModules(this, modules)
             H360WidgetUpdater.rememberRealtimeIntervalSec(this, intervalSec)
@@ -80,6 +82,7 @@ class WidgetSettingsActivity : AppCompatActivity() {
                 selectedLocation.id,
                 selectedLocation.name
             )
+            H360WidgetUpdater.rememberAdviceEnabled(this, adviceEnabled)
             H360WidgetUpdater.refreshAllWidgets(this)
             finish()
         }
