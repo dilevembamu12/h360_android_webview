@@ -414,6 +414,11 @@ object H360WidgetUpdater {
         } catch (e: Exception) {
             Log.e(TAG, "Insights widget update failed", e)
         }
+        try {
+            H360AdviceWidgetProvider.refreshAll(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Advice widget update failed", e)
+        }
     }
 
     private fun fetchAndStoreRemoteInsights(context: Context) {
@@ -575,6 +580,12 @@ object H360WidgetUpdater {
                 context,
                 advice.optString("title").ifBlank { null },
                 advice.optString("message").ifBlank { null }
+            )
+        } else {
+            rememberAdvice(
+                context,
+                context.getString(R.string.insights_advice_default_title),
+                context.getString(R.string.insights_advice_default_message)
             )
         }
         val currency = json.optJSONObject("currency")

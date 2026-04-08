@@ -93,6 +93,8 @@
     <string name="insights_kpi_top_product">TOP PRODUIT</string>
     <string name="insights_kpi_action">ACTION</string>
     <string name="insights_tip_prefix">Insight:</string>
+    <string name="insights_advice_default_title">Conseil du jour</string>
+    <string name="insights_advice_default_message">Bonjour, surveille les fermetures de caisse et lance un inventaire rapide en cas d ecart.</string>
     <string name="insights_refresh">↻</string>
     <string name="insights_open_dashboard">Ouvrir dashboard</string>
     <string name="insights_chart_desc">Tendance des ventes</string>

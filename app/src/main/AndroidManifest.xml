@@ -99,6 +99,18 @@
         </receiver>
 
         <receiver
+            android:name=".H360AdviceWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="cd.h360.pos.ACTION_ADVICE_REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/h360_advice_widget_info" />
+        </receiver>
+
+        <receiver
             android:name=".H360RealtimeRefreshReceiver"
             android:enabled="true"
             android:exported="true">
