@@ -47,7 +47,16 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
             val syncState = prefs.getString(H360WidgetUpdater.KEY_REMOTE_SYNC_STATE, "idle") ?: "idle"
             val syncMessage = prefs.getString(H360WidgetUpdater.KEY_REMOTE_SYNC_MESSAGE, "En attente de sync") ?: "En attente de sync"
             val hasSynced = prefs.getLong(H360WidgetUpdater.KEY_LAST_REMOTE_FETCH_MS, 0L) > 0L
+            val periodLabel = prefs.getString(H360WidgetUpdater.KEY_INSIGHTS_PERIOD_LABEL, "") ?: ""
+            val dateFrom = prefs.getString(H360WidgetUpdater.KEY_FILTER_DATE_FROM, "") ?: ""
+            val dateTo = prefs.getString(H360WidgetUpdater.KEY_FILTER_DATE_TO, "") ?: ""
+            val locationName = prefs.getString(H360WidgetUpdater.KEY_FILTER_LOCATION_NAME, context.getString(R.string.widget_all_locations))
+                ?: context.getString(R.string.widget_all_locations)
             val salesToday = prefs.getString(H360WidgetUpdater.KEY_SALES_TODAY, "0") ?: "0"
+            val salesYesterday = prefs.getString(H360WidgetUpdater.KEY_SALES_YESTERDAY, "0") ?: "0"
+            val salesVsYesterday = if (prefs.contains(H360WidgetUpdater.KEY_SALES_VS_YESTERDAY_PCT)) {
+                prefs.getInt(H360WidgetUpdater.KEY_SALES_VS_YESTERDAY_PCT, 0)
+            } else null
             val ticketsToday = prefs.getInt(H360WidgetUpdater.KEY_TICKETS_TODAY, 0)
             val avgTicket = prefs.getString(H360WidgetUpdater.KEY_AVG_TICKET, "0") ?: "0"
             val salesChangePct = if (prefs.contains(H360WidgetUpdater.KEY_SALES_CHANGE_PCT)) {
@@ -76,6 +85,8 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
             val profit = prefs.getString(H360WidgetUpdater.KEY_PROFIT_TODAY, "0") ?: "0"
             val overdue = prefs.getInt(H360WidgetUpdater.KEY_OVERDUE_INVOICES, 0)
             val collection = prefs.getString(H360WidgetUpdater.KEY_COLLECTION_RATE, "0%") ?: "0%"
+            val adviceTitle = prefs.getString(H360WidgetUpdater.KEY_INSIGHTS_ADVICE_TITLE, "") ?: ""
+            val adviceMessage = prefs.getString(H360WidgetUpdater.KEY_INSIGHTS_ADVICE_MESSAGE, "") ?: ""
 
             ids.forEach { widgetId ->
                 val views = RemoteViews(context.packageName, R.layout.widget_h360_insights_cards)
@@ -87,7 +98,13 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                         else -> context.getString(R.string.insights_title_sales)
                     }
                 )
-                views.setTextViewText(R.id.widgetCardsSubtitle, syncMessage)
+                val periodText = periodLabel.ifBlank {
+                    if (dateFrom.isNotBlank() && dateTo.isNotBlank()) "$dateFrom -> $dateTo" else ""
+                }
+                val subtitle = listOf(syncMessage, periodText, locationName)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" | ")
+                views.setTextViewText(R.id.widgetCardsSubtitle, subtitle)
                 views.setTextColor(
                     R.id.widgetCardsSubtitle,
                     if (syncState == "ok") 0xFF8FD19E.toInt() else 0xFFFFB4B4.toInt()
@@ -97,11 +114,12 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                 val safeSalesToday = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, salesToday)
                 val safeTicketsToday = if (blocked) "--" else ticketsToday.toString()
                 val safeAvgTicket = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, avgTicket)
-                val safeSalesChange = if (blocked || salesChangePct == null) "" else {
-                    val sign = if (salesChangePct > 0) "+" else ""
-                    " (${sign}${salesChangePct}%)"
+                val safeSalesChange = if (blocked || salesVsYesterday == null) "" else {
+                    val sign = if (salesVsYesterday > 0) "+" else ""
+                    " (${sign}${salesVsYesterday}% vs hier)"
                 }
                 val safeSalesWithChange = if (safeSalesChange.isNotBlank()) "$safeSalesToday$safeSalesChange" else safeSalesToday
+                val safeYesterdaySales = if (blocked) "--" else H360WidgetUpdater.formatMoneyDisplay(context, salesYesterday)
                 val safeSalesWeekChange = if (blocked || salesWeekChangePct == null) "" else {
                     val sign = if (salesWeekChangePct > 0) "+" else ""
                     " (${sign}${salesWeekChangePct}% vs S-1)"
@@ -130,7 +148,10 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
 
                 val safeTip = if (blocked || trendHint.isBlank()) "" else "${context.getString(R.string.insights_tip_prefix)} $trendHint"
                 val safeAction = if (blocked || suggestedAction.isBlank()) "" else suggestedAction
-                val tipText = safeTip.ifBlank { safeAction }
+                val safeAdvice = if (blocked || adviceMessage.isBlank()) "" else {
+                    if (adviceTitle.isBlank()) adviceMessage else "$adviceTitle: $adviceMessage"
+                }
+                val tipText = safeAdvice.ifBlank { safeTip.ifBlank { safeAction } }
 
                 val kpis: List<Pair<String, String>> = when (cat) {
                     CATEGORY_STOCK -> listOf(
@@ -146,9 +167,9 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
                         context.getString(R.string.insights_kpi_collection) to safeCollection
                     )
                     else -> listOf(
-                        context.getString(R.string.insights_kpi_sales_today) to safeSalesWithWeek,
+                        context.getString(R.string.insights_kpi_sales_period) to safeSalesWithChange,
+                        context.getString(R.string.insights_kpi_sales_yesterday) to safeYesterdaySales,
                         context.getString(R.string.insights_kpi_tickets_avg) to "${safeTicketsToday} | ${safeAvgTicket}${safeAvgTicketChange}",
-                        context.getString(R.string.insights_kpi_last_sale) to safeLastSale,
                         context.getString(R.string.insights_kpi_low_stock) to safeLowStock
                     )
                 }

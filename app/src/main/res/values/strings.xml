@@ -54,6 +54,11 @@
     <string name="widget_realtime_interval_30s">Toutes les 30 secondes</string>
     <string name="widget_realtime_interval_60s">Toutes les 60 secondes (recommande)</string>
     <string name="widget_realtime_interval_120s">Toutes les 120 secondes</string>
+    <string name="widget_filter_period_title">Plage de date insights</string>
+    <string name="widget_filter_date_from">Date debut</string>
+    <string name="widget_filter_date_to">Date fin</string>
+    <string name="widget_filter_location_title">Filtrer par emplacement</string>
+    <string name="widget_all_locations">Tous emplacements</string>
     <string name="widget_settings_save">Enregistrer</string>
     <string name="copilot_widget_title">H360 Copilot Widget</string>
     <string name="copilot_last_prompt">Dernier prompt</string>
@@ -71,6 +76,8 @@
     <string name="insights_tab_sales">Ventes</string>
     <string name="insights_tab_stock">Stock</string>
     <string name="insights_tab_health">Sante</string>
+    <string name="insights_kpi_sales_period">CA PERIODE</string>
+    <string name="insights_kpi_sales_yesterday">CA HIER</string>
     <string name="insights_kpi_sales_today">CA JOUR</string>
     <string name="insights_kpi_tickets">TICKETS</string>
     <string name="insights_kpi_tickets_avg">TICKETS / PANIER</string>

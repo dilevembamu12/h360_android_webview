@@ -17,6 +17,7 @@ import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Shader
+import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.net.HttpURLConnection
@@ -62,6 +63,16 @@ object H360WidgetUpdater {
     const val KEY_OVERDUE_INVOICES = "overdue_invoices"
     const val KEY_COLLECTION_RATE = "collection_rate"
     const val KEY_CURRENCY_SYMBOL = "currency_symbol"
+    const val KEY_SALES_YESTERDAY = "sales_yesterday"
+    const val KEY_SALES_VS_YESTERDAY_PCT = "sales_vs_yesterday_pct"
+    const val KEY_INSIGHTS_PERIOD_LABEL = "insights_period_label"
+    const val KEY_INSIGHTS_ADVICE_TITLE = "insights_advice_title"
+    const val KEY_INSIGHTS_ADVICE_MESSAGE = "insights_advice_message"
+    const val KEY_FILTER_DATE_FROM = "filter_date_from"
+    const val KEY_FILTER_DATE_TO = "filter_date_to"
+    const val KEY_FILTER_LOCATION_ID = "filter_location_id"
+    const val KEY_FILTER_LOCATION_NAME = "filter_location_name"
+    const val KEY_FILTER_LOCATION_OPTIONS_JSON = "filter_location_options_json"
     const val KEY_LAST_REMOTE_FETCH_MS = "last_remote_fetch_ms"
     private const val KEY_REMOTE_REFRESH_INTERVAL_SEC = "remote_refresh_interval_sec"
     private const val KEY_WIDGET_REALTIME_INTERVAL_SEC = "widget_realtime_interval_sec"
@@ -76,6 +87,11 @@ object H360WidgetUpdater {
     private const val MODULE_ACTIVITY = "activity"
     private val networkExecutor = Executors.newSingleThreadExecutor()
     private val remoteFetchInProgress = AtomicBoolean(false)
+
+    data class LocationOption(
+        val id: Int,
+        val name: String
+    )
 
     fun rememberRole(context: Context, role: String) {
         prefs(context).edit().putString(KEY_ROLE, role.ifBlank { "guest" }).apply()
@@ -115,6 +131,65 @@ object H360WidgetUpdater {
 
     fun rememberEnabledModules(context: Context, modules: Set<String>) {
         prefs(context).edit().putString(KEY_ENABLED_MODULES, modules.joinToString(",")).apply()
+    }
+
+    fun rememberWidgetFilters(
+        context: Context,
+        dateFrom: String,
+        dateTo: String,
+        locationId: Int,
+        locationName: String?
+    ) {
+        prefs(context).edit()
+            .putString(KEY_FILTER_DATE_FROM, dateFrom.ifBlank { todayDateString() })
+            .putString(KEY_FILTER_DATE_TO, dateTo.ifBlank { todayDateString() })
+            .putInt(KEY_FILTER_LOCATION_ID, locationId.coerceAtLeast(0))
+            .putString(KEY_FILTER_LOCATION_NAME, locationName?.ifBlank { null } ?: context.getString(R.string.widget_all_locations))
+            .apply()
+    }
+
+    fun readFilterDateFrom(context: Context): String {
+        return prefs(context).getString(KEY_FILTER_DATE_FROM, todayDateString()).orEmpty().ifBlank { todayDateString() }
+    }
+
+    fun readFilterDateTo(context: Context): String {
+        return prefs(context).getString(KEY_FILTER_DATE_TO, todayDateString()).orEmpty().ifBlank { todayDateString() }
+    }
+
+    fun readFilterLocationId(context: Context): Int {
+        return prefs(context).getInt(KEY_FILTER_LOCATION_ID, 0).coerceAtLeast(0)
+    }
+
+    fun readFilterLocationName(context: Context): String {
+        return prefs(context).getString(KEY_FILTER_LOCATION_NAME, context.getString(R.string.widget_all_locations))
+            .orEmpty()
+            .ifBlank { context.getString(R.string.widget_all_locations) }
+    }
+
+    fun rememberLocationOptions(context: Context, locations: JSONArray?) {
+        val serialized = locations?.toString().orEmpty()
+        prefs(context).edit().putString(KEY_FILTER_LOCATION_OPTIONS_JSON, serialized).apply()
+    }
+
+    fun readLocationOptions(context: Context): List<LocationOption> {
+        val fallback = mutableListOf(LocationOption(0, context.getString(R.string.widget_all_locations)))
+        val raw = prefs(context).getString(KEY_FILTER_LOCATION_OPTIONS_JSON, "").orEmpty()
+        if (raw.isBlank()) return fallback
+        return try {
+            val arr = JSONArray(raw)
+            val out = mutableListOf(LocationOption(0, context.getString(R.string.widget_all_locations)))
+            for (i in 0 until arr.length()) {
+                val row = arr.optJSONObject(i) ?: continue
+                val id = row.optInt("id", 0)
+                val name = row.optString("name").trim()
+                if (id > 0 && name.isNotBlank()) {
+                    out.add(LocationOption(id, name))
+                }
+            }
+            out.distinctBy { it.id }
+        } catch (_: Exception) {
+            fallback
+        }
     }
 
     fun rememberRealtimeIntervalSec(context: Context, seconds: Int) {
@@ -184,6 +259,26 @@ object H360WidgetUpdater {
         if (topProductChangePct != null) editor.putInt(KEY_TOP_PRODUCT_CHANGE_PCT, topProductChangePct) else editor.remove(KEY_TOP_PRODUCT_CHANGE_PCT)
         if (!trendHint.isNullOrBlank()) editor.putString(KEY_TREND_HINT, trendHint.trim()) else editor.remove(KEY_TREND_HINT)
         if (!suggestedAction.isNullOrBlank()) editor.putString(KEY_SUGGESTED_ACTION, suggestedAction.trim()) else editor.remove(KEY_SUGGESTED_ACTION)
+        editor.apply()
+    }
+
+    fun rememberSalesComparison(
+        context: Context,
+        salesYesterday: String?,
+        salesVsYesterdayPct: Int?,
+        periodLabel: String?
+    ) {
+        val editor = prefs(context).edit()
+        if (!salesYesterday.isNullOrBlank()) editor.putString(KEY_SALES_YESTERDAY, salesYesterday) else editor.remove(KEY_SALES_YESTERDAY)
+        if (salesVsYesterdayPct != null) editor.putInt(KEY_SALES_VS_YESTERDAY_PCT, salesVsYesterdayPct) else editor.remove(KEY_SALES_VS_YESTERDAY_PCT)
+        if (!periodLabel.isNullOrBlank()) editor.putString(KEY_INSIGHTS_PERIOD_LABEL, periodLabel.trim()) else editor.remove(KEY_INSIGHTS_PERIOD_LABEL)
+        editor.apply()
+    }
+
+    fun rememberAdvice(context: Context, title: String?, message: String?) {
+        val editor = prefs(context).edit()
+        if (!title.isNullOrBlank()) editor.putString(KEY_INSIGHTS_ADVICE_TITLE, title.trim()) else editor.remove(KEY_INSIGHTS_ADVICE_TITLE)
+        if (!message.isNullOrBlank()) editor.putString(KEY_INSIGHTS_ADVICE_MESSAGE, message.trim()) else editor.remove(KEY_INSIGHTS_ADVICE_MESSAGE)
         editor.apply()
     }
 
@@ -327,7 +422,7 @@ object H360WidgetUpdater {
 
         var lastError = "API insights indisponible"
         urls.forEach { url ->
-            val result = requestInsights(url)
+            val result = requestInsights(context, url)
             when {
                 result.code == HttpURLConnection.HTTP_UNAUTHORIZED || result.code == HttpURLConnection.HTTP_FORBIDDEN -> {
                     rememberRemoteSyncState(context, "auth_required", "Session expiree: reconnecte-toi")
@@ -370,15 +465,16 @@ object H360WidgetUpdater {
         rememberRemoteSyncState(context, "error", lastError)
     }
 
-    private fun requestInsights(url: String): InsightHttpResult {
+    private fun requestInsights(context: Context, url: String): InsightHttpResult {
         return try {
-            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            val finalUrl = buildInsightsUrl(context, url)
+            val conn = (URL(finalUrl).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = 6000
                 readTimeout = 6000
                 setRequestProperty("Accept", "application/json")
             }
-            val cookie = CookieManager.getInstance().getCookie(url)
+            val cookie = CookieManager.getInstance().getCookie(finalUrl)
             if (!cookie.isNullOrBlank()) {
                 conn.setRequestProperty("Cookie", cookie)
             }
@@ -392,6 +488,25 @@ object H360WidgetUpdater {
         } catch (e: Exception) {
             InsightHttpResult(-1, "", e.message.orEmpty())
         }
+    }
+
+    private fun buildInsightsUrl(context: Context, baseUrl: String): String {
+        val uri = Uri.parse(baseUrl)
+        val dateFrom = readFilterDateFrom(context)
+        val dateTo = readFilterDateTo(context)
+        val locationId = readFilterLocationId(context)
+        val builder = uri.buildUpon().clearQuery()
+        uri.queryParameterNames.forEach { key ->
+            uri.getQueryParameters(key).forEach { value ->
+                builder.appendQueryParameter(key, value)
+            }
+        }
+        builder.appendQueryParameter("date_from", dateFrom)
+        builder.appendQueryParameter("date_to", dateTo)
+        if (locationId > 0) {
+            builder.appendQueryParameter("location_id", locationId.toString())
+        }
+        return builder.build().toString()
     }
 
     private fun candidateInsightsUrls(): List<String> {
@@ -444,6 +559,24 @@ object H360WidgetUpdater {
         }
 
         val insights = json.optJSONObject("insights")
+        val filters = json.optJSONObject("filters")
+        if (filters != null) {
+            val dateFrom = filters.optString("date_from").ifBlank { readFilterDateFrom(context) }
+            val dateTo = filters.optString("date_to").ifBlank { readFilterDateTo(context) }
+            val locationId = if (filters.has("location_id")) filters.optInt("location_id", 0) else 0
+            val locationName = filters.optString("location_name").ifBlank { context.getString(R.string.widget_all_locations) }
+            rememberWidgetFilters(context, dateFrom, dateTo, locationId, locationName)
+            rememberLocationOptions(context, filters.optJSONArray("available_locations"))
+            rememberSalesComparison(context, null, null, filters.optString("period_label").ifBlank { null })
+        }
+        val advice = json.optJSONObject("advice")
+        if (advice != null) {
+            rememberAdvice(
+                context,
+                advice.optString("title").ifBlank { null },
+                advice.optString("message").ifBlank { null }
+            )
+        }
         val currency = json.optJSONObject("currency")
         val currencySymbol = when {
             currency != null && currency.optString("symbol").isNotBlank() -> currency.optString("symbol")
@@ -464,10 +597,20 @@ object H360WidgetUpdater {
             rememberSalesTrend(context, sales.optString("sales_trend", "Stable"))
             rememberSalesExtras(
                 context,
-                if (sales.has("sales_change_pct")) sales.optInt("sales_change_pct") else null,
+                if (sales.has("sales_vs_yesterday_pct")) sales.optInt("sales_vs_yesterday_pct")
+                else if (sales.has("sales_change_pct")) sales.optInt("sales_change_pct")
+                else null,
                 if (sales.has("last_sale_minutes")) sales.optInt("last_sale_minutes") else null,
                 sales.optString("top_product_name", "").ifBlank { null },
                 if (sales.has("top_product_qty")) sales.optInt("top_product_qty") else null
+            )
+            rememberSalesComparison(
+                context,
+                sales.optString("sales_yesterday", "").ifBlank { null },
+                if (sales.has("sales_vs_yesterday_pct")) sales.optInt("sales_vs_yesterday_pct")
+                else if (sales.has("sales_change_pct")) sales.optInt("sales_change_pct")
+                else null,
+                null
             )
             rememberSalesV2Extras(
                 context,
@@ -672,6 +815,10 @@ object H360WidgetUpdater {
 
     private fun nowStamp(): String {
         return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+    }
+
+    private fun todayDateString(): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     }
 
     fun formatMoneyDisplay(context: Context, raw: String): String {
