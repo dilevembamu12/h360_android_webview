@@ -1,10 +1,13 @@
 package cd.h360.pos
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.SystemClock
 import android.net.Uri
 import android.util.Log
 import android.webkit.CookieManager
@@ -25,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 object H360WidgetUpdater {
     private const val TAG = "H360WidgetUpdater"
+    const val ACTION_WIDGET_REALTIME_TICK = "cd.h360.pos.ACTION_WIDGET_REALTIME_TICK"
     const val PREFS_NAME = "h360_widget_prefs"
     const val KEY_ROLE = "role"
     const val KEY_OFFLINE_PENDING = "offline_pending"
@@ -63,6 +67,7 @@ object H360WidgetUpdater {
     const val KEY_REMOTE_SYNC_STATE = "remote_sync_state"
     const val KEY_REMOTE_SYNC_MESSAGE = "remote_sync_message"
     private const val DEFAULT_REMOTE_REFRESH_INTERVAL_SEC = 300
+    private const val REALTIME_TICK_INTERVAL_MS = 60_000L
 
     private const val MODULE_SALES = "sales"
     private const val MODULE_STOCK = "stock"
@@ -214,8 +219,39 @@ object H360WidgetUpdater {
     }
 
     fun refreshAllWidgets(context: Context) {
+        scheduleRealtimeRefresh(context.applicationContext)
         refreshFromRemoteIfDue(context, force = false)
         renderWidgets(context)
+    }
+
+    fun handleRealtimeTick(context: Context) {
+        val appContext = context.applicationContext
+        refreshFromRemoteIfDue(appContext, force = true)
+        renderWidgets(appContext)
+        scheduleRealtimeRefresh(appContext)
+    }
+
+    fun scheduleRealtimeRefresh(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val triggerAt = SystemClock.elapsedRealtime() + REALTIME_TICK_INTERVAL_MS
+        val pendingIntent = realtimeTickPendingIntent(context)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    triggerAt,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.set(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    triggerAt,
+                    pendingIntent
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to schedule widget realtime refresh", e)
+        }
     }
 
     fun refreshFromRemoteIfDue(context: Context, force: Boolean) {
@@ -567,6 +603,18 @@ object H360WidgetUpdater {
         return PendingIntent.getActivity(
             context,
             requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun realtimeTickPendingIntent(context: Context): PendingIntent {
+        val intent = Intent(context, H360RealtimeRefreshReceiver::class.java).apply {
+            action = ACTION_WIDGET_REALTIME_TICK
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            9901,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
