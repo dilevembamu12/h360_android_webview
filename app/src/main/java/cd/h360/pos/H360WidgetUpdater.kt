@@ -651,11 +651,15 @@ object H360WidgetUpdater {
             rememberSalesComparison(context, null, null, filters.optString("period_label").ifBlank { null })
         }
         val advice = json.optJSONObject("advice")
+        var adviceTitleForNotif = ""
+        var adviceMessageForNotif = ""
         if (advice != null) {
+            adviceTitleForNotif = advice.optString("title").ifBlank { context.getString(R.string.insights_advice_default_title) }
+            adviceMessageForNotif = advice.optString("message").ifBlank { "" }
             rememberAdvice(
                 context,
-                advice.optString("title").ifBlank { null },
-                advice.optString("message").ifBlank { null }
+                adviceTitleForNotif.ifBlank { null },
+                adviceMessageForNotif.ifBlank { null }
             )
         } else {
             rememberAdvice(
@@ -663,6 +667,8 @@ object H360WidgetUpdater {
                 context.getString(R.string.insights_advice_default_title),
                 context.getString(R.string.insights_advice_default_message)
             )
+            adviceTitleForNotif = context.getString(R.string.insights_advice_default_title)
+            adviceMessageForNotif = context.getString(R.string.insights_advice_default_message)
         }
         val currency = json.optJSONObject("currency")
         val currencySymbol = when {
@@ -743,6 +749,7 @@ object H360WidgetUpdater {
             .putInt(KEY_REMOTE_REFRESH_INTERVAL_SEC, refreshSec)
             .apply()
         rememberRemoteSyncState(context, "ok", "Sync OK")
+        H360NotificationDispatcher.notifyDailyAdvice(context, adviceTitleForNotif, adviceMessageForNotif)
 
         renderWidgets(context)
     }

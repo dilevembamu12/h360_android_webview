@@ -109,4 +109,5 @@
     <string name="notif_overdue_title">Factures en retard</string>
     <string name="notif_overdue_text">%1$d factures en retard a suivre.</string>
     <string name="notif_copilot_title">H360 Copilot</string>
+    <string name="notif_advice_title">Conseil du jour</string>
 </resources>

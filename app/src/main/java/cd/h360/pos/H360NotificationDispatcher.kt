@@ -17,6 +17,7 @@ object H360NotificationDispatcher {
     private const val CHANNEL_ID = "h360_insights"
     private const val PREFS = "h360_notifications"
     private const val THROTTLE_MS = 15 * 60 * 1000L
+    private const val ADVICE_THROTTLE_MS = 6 * 60 * 60 * 1000L
 
     fun notifyOfflinePending(context: Context, pending: Int) {
         if (pending < 5) return
@@ -71,6 +72,27 @@ object H360NotificationDispatcher {
         )
     }
 
+    fun notifyDailyAdvice(context: Context, title: String, message: String) {
+        val safeTitle = title.trim().ifBlank { context.getString(R.string.notif_advice_title) }
+        val safeMessage = message.trim()
+        if (safeMessage.isBlank()) return
+        if (!canSend(context)) return
+        if (isThrottled(context, "daily_advice", ADVICE_THROTTLE_MS)) return
+
+        val deepLink = runCatching {
+            val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
+            "${base.scheme}://${base.host}/home"
+        }.getOrDefault("h360://shortcut/pos")
+
+        notify(
+            context = context,
+            id = 1005,
+            title = safeTitle,
+            text = safeMessage,
+            deepLink = deepLink
+        )
+    }
+
     private fun notify(context: Context, id: Int, title: String, text: String, deepLink: String) {
         ensureChannel(context)
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink), context, MainActivity::class.java).apply {
@@ -116,11 +138,11 @@ object H360NotificationDispatcher {
         manager.createNotificationChannel(channel)
     }
 
-    private fun isThrottled(context: Context, key: String): Boolean {
+    private fun isThrottled(context: Context, key: String, throttleMs: Long = THROTTLE_MS): Boolean {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
         val last = prefs.getLong(key, 0L)
-        val throttled = now - last < THROTTLE_MS
+        val throttled = now - last < throttleMs
         if (!throttled) {
             prefs.edit().putLong(key, now).apply()
         }
