@@ -87,3 +87,22 @@ Un workflow CI est fourni:
 - Pas encore d’écran splash natif brandé
 - Pas encore de deep links
 
+
+## Build release signe (GitHub Actions)
+Workflow:
+- `.github/workflows/android-release-signed.yml`
+
+Secrets GitHub a creer (Repository -> Settings -> Secrets and variables -> Actions):
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_SIGNING_STORE_PASSWORD`
+- `ANDROID_SIGNING_KEY_ALIAS`
+- `ANDROID_SIGNING_KEY_PASSWORD`
+
+Commande locale utile pour encoder le keystore en base64:
+```bash
+base64 -w 0 my-release-key.jks
+```
+
+Le workflow genere:
+- `h360pos-webview-release-aab-signed` (pour Google Play)
+- `h360pos-webview-release-apk-signed` (install direct)

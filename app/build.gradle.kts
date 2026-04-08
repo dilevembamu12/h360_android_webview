@@ -3,6 +3,17 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val signingKeystorePath = System.getenv("ANDROID_SIGNING_KEYSTORE_PATH")
+val signingKeystorePassword = System.getenv("ANDROID_SIGNING_STORE_PASSWORD")
+val signingKeyAlias = System.getenv("ANDROID_SIGNING_KEY_ALIAS")
+val signingKeyPassword = System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    signingKeystorePath,
+    signingKeystorePassword,
+    signingKeyAlias,
+    signingKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "cd.h360.pos"
     compileSdk = 35
@@ -26,6 +37,17 @@ android {
         buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://pos.h360.cd/h360/widgets/insights\"")
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(signingKeystorePath!!)
+                storePassword = signingKeystorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -34,6 +56,9 @@ android {
             buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd\"")
             buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://pos.h360.cd/h360offline/ping\"")
             buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://pos.h360.cd/h360/widgets/insights\"")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
