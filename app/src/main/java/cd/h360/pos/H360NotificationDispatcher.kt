@@ -24,6 +24,7 @@ object H360NotificationDispatcher {
     private const val THROTTLE_MS = 15 * 60 * 1000L
     private const val ADVICE_THROTTLE_MS = 6 * 60 * 60 * 1000L
     private const val ADVICE_H_INSUFFICIENT_THROTTLE_MS = 2 * 60 * 60 * 1000L
+    private const val KEY_DAILY_ADVICE_HASH = "daily_advice_hash"
 
     fun notifyOfflinePending(context: Context, pending: Int) {
         if (pending < 5) return
@@ -83,7 +84,16 @@ object H360NotificationDispatcher {
         val safeMessage = message.trim()
         if (safeMessage.isBlank()) return
         if (!canSend(context)) return
-        if (isThrottled(context, "daily_advice", ADVICE_THROTTLE_MS)) return
+
+        val normalizedMessage = normalizeMultiline(safeMessage)
+        val compactPreview = toCompactSingleLine(normalizedMessage)
+        if (compactPreview.isBlank()) return
+
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val newHash = compactPreview.hashCode().toString()
+        val lastHash = prefs.getString(KEY_DAILY_ADVICE_HASH, "") ?: ""
+        val unchanged = newHash == lastHash
+        if (unchanged && isThrottled(context, "daily_advice", ADVICE_THROTTLE_MS)) return
 
         val deepLink = runCatching {
             val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
@@ -94,9 +104,11 @@ object H360NotificationDispatcher {
             context = context,
             id = 1005,
             title = safeTitle,
-            text = safeMessage,
-            deepLink = deepLink
+            text = compactPreview,
+            deepLink = deepLink,
+            bigText = normalizedMessage
         )
+        prefs.edit().putString(KEY_DAILY_ADVICE_HASH, newHash).apply()
     }
 
     fun notifyAdviceQuotaInsufficient(context: Context, message: String? = null) {
@@ -202,7 +214,14 @@ object H360NotificationDispatcher {
         writeActiveBackendIds(context, newIds)
     }
 
-    private fun notify(context: Context, id: Int, title: String, text: String, deepLink: String) {
+    private fun notify(
+        context: Context,
+        id: Int,
+        title: String,
+        text: String,
+        deepLink: String,
+        bigText: String? = null
+    ) {
         ensureChannel(context)
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink), context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -213,11 +232,12 @@ object H360NotificationDispatcher {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val expandedText = bigText?.trim().orEmpty().ifBlank { text }
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setStyle(NotificationCompat.BigTextStyle().setBigContentTitle(title).bigText(expandedText))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pending)
@@ -274,5 +294,24 @@ object H360NotificationDispatcher {
             .edit()
             .putString(KEY_BACKEND_ACTIVE_IDS, serialized)
             .apply()
+    }
+
+    private fun normalizeMultiline(raw: String): String {
+        return raw
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString(separator = "\n")
+    }
+
+    private fun toCompactSingleLine(raw: String): String {
+        return raw
+            .lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString(separator = " | ")
+            .take(220)
     }
 }
