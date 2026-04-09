@@ -147,6 +147,7 @@ class MainActivity : AppCompatActivity() {
         H360WidgetUpdater.rememberLastUpdate(this, nowStamp())
         AppShortcutsManager.updateForRole(this, readRole())
         H360WidgetUpdater.refreshAllWidgets(this)
+        H360FcmRegistrar.syncTokenIfPossible(this, "app_start")
         checkMaintenanceAndLoad()
     }
 
@@ -350,6 +351,7 @@ class MainActivity : AppCompatActivity() {
                         AppShortcutsManager.updateForRole(this@MainActivity, inferredRole)
                     }
                     if (url.startsWith(appOrigin) && !url.contains("/login")) {
+                        H360FcmRegistrar.syncTokenIfPossible(this@MainActivity, "session_page")
                         H360WidgetUpdater.refreshFromRemoteIfDue(this@MainActivity, force = true)
                     }
                     applyOfflineUiTuning(view, url)

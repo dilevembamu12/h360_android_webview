@@ -115,6 +115,27 @@ object H360NotificationDispatcher {
         )
     }
 
+    fun notifyServerPush(context: Context, title: String, message: String, deepLink: String? = null, notificationId: Int? = null) {
+        val safeTitle = title.trim().ifBlank { context.getString(R.string.notif_copilot_title) }
+        val safeMessage = message.trim()
+        if (safeMessage.isBlank()) return
+        if (!canSend(context)) return
+        val safeDeepLink = deepLink?.trim().orEmpty().ifBlank {
+            runCatching {
+                val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
+                "${base.scheme}://${base.host}/home"
+            }.getOrDefault("h360://shortcut/pos")
+        }
+        val id = notificationId ?: ((System.currentTimeMillis() % 100000).toInt() + 2000)
+        notify(
+            context = context,
+            id = id,
+            title = safeTitle,
+            text = safeMessage,
+            deepLink = safeDeepLink
+        )
+    }
+
     fun updatePersistentBackendNotifications(context: Context, unreadTotal: Int, messages: List<String>) {
         if (!canSend(context)) return
         ensureChannel(context)
