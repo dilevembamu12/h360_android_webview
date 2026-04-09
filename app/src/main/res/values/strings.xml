@@ -111,6 +111,8 @@
     <string name="notif_overdue_text">%1$d factures en retard a suivre.</string>
     <string name="notif_copilot_title">H360 Copilot</string>
     <string name="notif_advice_title">Conseil du jour</string>
+    <string name="notif_advice_h_insufficient_title">Credit h insuffisant</string>
+    <string name="notif_advice_h_insufficient_text">Conseil IA non genere: solde h insuffisant. Recharge ton wallet h pour reactiver les conseils automatiques.</string>
     <string name="notif_backend_center_title">Centre notifications backend</string>
     <string name="notif_backend_center_title_with_count">Centre notifications backend (%1$d non lues)</string>
     <string name="notif_backend_center_empty">Aucune notification sensible en attente</string>

@@ -28,13 +28,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // H360-CUSTOM-PATCH [H360_ANDROID_WEBVIEW_URL]
-        // Default values (safe baseline). buildTypes below can override per variant.
-        buildConfigField("String", "WEBVIEW_BASE_URL", "\"https://pos.h360.cd/login\"")
-        buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd\"")
+        // DEV TEST MODE: default all variants on stack.git.h360.cd.
+        buildConfigField("String", "WEBVIEW_BASE_URL", "\"https://stack.git.h360.cd/login\"")
+        buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd,stack.git.h360.cd\"")
         buildConfigField("int", "SPLASH_DELAY_MS", "1200")
         buildConfigField("boolean", "ENABLE_KIOSK_MODE", "false")
-        buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://pos.h360.cd/h360offline/ping\"")
-        buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://pos.h360.cd/h360/widgets/insights\"")
+        buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://stack.git.h360.cd/h360offline/ping\"")
+        buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://stack.git.h360.cd/h360/widgets/insights\"")
     }
 
     signingConfigs {
@@ -51,11 +51,11 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            // Production release must always target the public domain.
-            buildConfigField("String", "WEBVIEW_BASE_URL", "\"https://pos.h360.cd/login\"")
-            buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd\"")
-            buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://pos.h360.cd/h360offline/ping\"")
-            buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://pos.h360.cd/h360/widgets/insights\"")
+            // DEV TEST MODE: release also targets stack.git.h360.cd during test cycle.
+            buildConfigField("String", "WEBVIEW_BASE_URL", "\"https://stack.git.h360.cd/login\"")
+            buildConfigField("String", "ALLOWED_INTERNAL_HOSTS", "\"pos.h360.cd,stack.git.h360.cd\"")
+            buildConfigField("String", "MAINTENANCE_CHECK_URL", "\"https://stack.git.h360.cd/h360offline/ping\"")
+            buildConfigField("String", "WIDGET_INSIGHTS_URL", "\"https://stack.git.h360.cd/h360/widgets/insights\"")
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }

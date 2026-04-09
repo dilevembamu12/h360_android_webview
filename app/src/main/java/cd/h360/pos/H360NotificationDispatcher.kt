@@ -19,6 +19,7 @@ object H360NotificationDispatcher {
     private const val PREFS = "h360_notifications"
     private const val THROTTLE_MS = 15 * 60 * 1000L
     private const val ADVICE_THROTTLE_MS = 6 * 60 * 60 * 1000L
+    private const val ADVICE_H_INSUFFICIENT_THROTTLE_MS = 2 * 60 * 60 * 1000L
 
     fun notifyOfflinePending(context: Context, pending: Int) {
         if (pending < 5) return
@@ -89,6 +90,26 @@ object H360NotificationDispatcher {
             context = context,
             id = 1005,
             title = safeTitle,
+            text = safeMessage,
+            deepLink = deepLink
+        )
+    }
+
+    fun notifyAdviceQuotaInsufficient(context: Context, message: String? = null) {
+        if (!canSend(context)) return
+        if (isThrottled(context, "advice_h_insufficient", ADVICE_H_INSUFFICIENT_THROTTLE_MS)) return
+        val safeMessage = message?.trim().orEmpty().ifBlank {
+            context.getString(R.string.notif_advice_h_insufficient_text)
+        }
+        val deepLink = runCatching {
+            val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
+            "${base.scheme}://${base.host}/h360-copilot/usage-history"
+        }.getOrDefault("h360://shortcut/copilot")
+
+        notify(
+            context = context,
+            id = 1006,
+            title = context.getString(R.string.notif_advice_h_insufficient_title),
             text = safeMessage,
             deepLink = deepLink
         )

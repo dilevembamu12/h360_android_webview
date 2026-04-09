@@ -776,9 +776,33 @@ object H360WidgetUpdater {
         val advice = json.optJSONObject("advice")
         var adviceTitleForNotif = ""
         var adviceMessageForNotif = ""
+        var adviceQuotaInsufficient = false
+        var adviceQuotaMessage: String? = null
         if (advice != null) {
             adviceTitleForNotif = advice.optString("title").ifBlank { context.getString(R.string.insights_advice_default_title) }
             adviceMessageForNotif = advice.optString("message").ifBlank { "" }
+            val quotaState = advice.optString("quota_status").trim().lowercase(Locale.US)
+            val adviceStatus = advice.optString("status").trim().lowercase(Locale.US)
+            val errorCode = advice.optString("error_code").trim().lowercase(Locale.US)
+            val blockedReason = advice.optString("blocked_reason").trim().lowercase(Locale.US)
+            val quotaObj = advice.optJSONObject("quota_h")
+            val quotaObjStatus = quotaObj?.optString("status").orEmpty().trim().lowercase(Locale.US)
+            val messageLower = adviceMessageForNotif.lowercase(Locale.US)
+            adviceQuotaInsufficient =
+                quotaState in setOf("insufficient_h", "failed", "no_h")
+                    || adviceStatus in setOf("insufficient_h", "quota_failed", "no_h")
+                    || errorCode in setOf("insufficient_h", "quota_failed", "wallet_insufficient")
+                    || blockedReason in setOf("insufficient_h", "quota_failed", "wallet_insufficient")
+                    || quotaObjStatus in setOf("insufficient_h", "failed", "no_h")
+                    || messageLower.contains("h insuff")
+                    || messageLower.contains("credit h insuff")
+            if (adviceQuotaInsufficient) {
+                adviceQuotaMessage = if (adviceMessageForNotif.isBlank()) {
+                    context.getString(R.string.notif_advice_h_insufficient_text)
+                } else {
+                    adviceMessageForNotif
+                }
+            }
             rememberAdvice(
                 context,
                 adviceTitleForNotif.ifBlank { null },
@@ -874,6 +898,18 @@ object H360WidgetUpdater {
         rememberRemoteSyncState(context, "ok", "Sync OK")
         if (readAdviceEnabled(context)) {
             H360NotificationDispatcher.notifyDailyAdvice(context, adviceTitleForNotif, adviceMessageForNotif)
+            if (adviceQuotaInsufficient) {
+                H360NotificationDispatcher.notifyAdviceQuotaInsufficient(context, adviceQuotaMessage)
+                rememberRemoteSyncState(context, "warning", "Sync OK | quota h insuffisant")
+                rememberRemoteDiagnostic(
+                    context = context,
+                    state = "quota_h",
+                    httpCode = 200,
+                    endpoint = "advice",
+                    hasCookie = true,
+                    detail = "wallet_h_insufficient"
+                )
+            }
         }
 
         renderWidgets(context)
