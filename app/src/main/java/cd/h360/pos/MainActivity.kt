@@ -262,7 +262,8 @@ class MainActivity : AppCompatActivity() {
         settings.loadWithOverviewMode = true
         settings.setSupportMultipleWindows(false)
         settings.mediaPlaybackRequiresUserGesture = false
-        webView.setInitialScale(80)
+        // Keep native scale to avoid half-width rendering on some Android OEM WebViews.
+        webView.setInitialScale(0)
 
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
@@ -515,14 +516,20 @@ class MainActivity : AppCompatActivity() {
                 try {
                     var header = document.querySelector('.h360-main-header');
                     var body = document.body;
-                    var headerBg = header ? window.getComputedStyle(header).backgroundColor : '';
-                    var bodyBg = body ? window.getComputedStyle(body).backgroundColor : '';
+                    var root = document.documentElement;
+                    var headerStyle = header ? window.getComputedStyle(header) : null;
+                    var bodyStyle = body ? window.getComputedStyle(body) : null;
+                    var rootStyle = root ? window.getComputedStyle(root) : null;
+                    var metaTheme = (document.querySelector('meta[name="theme-color"]') || {}).content || '';
                     return JSON.stringify({
-                        headerBg: String(headerBg || '').trim(),
-                        bodyBg: String(bodyBg || '').trim()
+                        headerBg: String((headerStyle && headerStyle.backgroundColor) || '').trim(),
+                        headerBgImage: String((headerStyle && headerStyle.backgroundImage) || '').trim(),
+                        bodyBg: String((bodyStyle && bodyStyle.backgroundColor) || '').trim(),
+                        rootBg: String((rootStyle && rootStyle.backgroundColor) || '').trim(),
+                        metaTheme: String(metaTheme || '').trim()
                     });
                 } catch (e) {
-                    return JSON.stringify({ headerBg: '', bodyBg: '' });
+                    return JSON.stringify({ headerBg: '', headerBgImage: '', bodyBg: '', rootBg: '', metaTheme: '' });
                 }
             })();
         """.trimIndent()
@@ -539,8 +546,16 @@ class MainActivity : AppCompatActivity() {
             val jsonString = decodeJsResult(rawResult)
             val obj = JSONObject(jsonString)
             val headerBg = obj.optString("headerBg").trim()
+            val headerBgImage = obj.optString("headerBgImage").trim()
             val bodyBg = obj.optString("bodyBg").trim()
-            parseCssColor(headerBg) ?: parseCssColor(bodyBg) ?: fallback
+            val rootBg = obj.optString("rootBg").trim()
+            val metaTheme = obj.optString("metaTheme").trim()
+            parseCssColor(headerBg)
+                ?: extractColorFromGradient(headerBgImage)
+                ?: parseCssColor(metaTheme)
+                ?: parseCssColor(bodyBg)
+                ?: parseCssColor(rootBg)
+                ?: fallback
         }.getOrDefault(fallback)
 
         binding.toolbar.setBackgroundColor(parsed)
@@ -573,13 +588,26 @@ class MainActivity : AppCompatActivity() {
         val value = input?.trim().orEmpty()
         if (value.isBlank() || value.equals("transparent", ignoreCase = true)) return null
         return runCatching { Color.parseColor(value) }.getOrElse {
-            val rgbRegex = Regex("""rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)""", RegexOption.IGNORE_CASE)
-            val m = rgbRegex.find(value) ?: return null
+            val rgbaRegex = Regex("""rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\)""", RegexOption.IGNORE_CASE)
+            val m = rgbaRegex.find(value) ?: return null
             val r = m.groupValues.getOrNull(1)?.toIntOrNull() ?: return null
             val g = m.groupValues.getOrNull(2)?.toIntOrNull() ?: return null
             val b = m.groupValues.getOrNull(3)?.toIntOrNull() ?: return null
+            val alphaRaw = m.groupValues.getOrNull(4)?.trim().orEmpty()
+            val alpha = if (alphaRaw.isBlank()) 1.0 else alphaRaw.toDoubleOrNull() ?: 1.0
+            if (alpha <= 0.05) {
+                return null
+            }
             Color.rgb(r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
         }
+    }
+
+    private fun extractColorFromGradient(input: String?): Int? {
+        val value = input?.trim().orEmpty()
+        if (value.isBlank() || value.equals("none", ignoreCase = true)) return null
+        val rgbaRegex = Regex("""rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[0-9.]+)?\s*\)""", RegexOption.IGNORE_CASE)
+        val firstColorToken = rgbaRegex.find(value)?.value ?: return null
+        return parseCssColor(firstColorToken)
     }
 
     private fun isDarkColor(color: Int): Boolean {
