@@ -12,10 +12,14 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import kotlin.math.abs
 
 object H360NotificationDispatcher {
     private const val CHANNEL_ID = "h360_insights"
     private const val BACKEND_CENTER_ID = 1010
+    private const val BACKEND_ITEM_BASE_ID = 12000
+    private const val BACKEND_ITEM_SPAN = 7000
+    private const val KEY_BACKEND_ACTIVE_IDS = "backend_active_ids"
     private const val PREFS = "h360_notifications"
     private const val THROTTLE_MS = 15 * 60 * 1000L
     private const val ADVICE_THROTTLE_MS = 6 * 60 * 60 * 1000L
@@ -136,55 +140,66 @@ object H360NotificationDispatcher {
         )
     }
 
-    fun updatePersistentBackendNotifications(context: Context, unreadTotal: Int, messages: List<String>) {
+    fun updatePersistentBackendNotifications(
+        context: Context,
+        unreadTotal: Int,
+        entries: List<H360WidgetUpdater.BackendNotificationEntry>
+    ) {
         if (!canSend(context)) return
         ensureChannel(context)
 
-        val cleaned = messages.map { it.trim() }.filter { it.isNotBlank() }.take(6)
-        if (cleaned.isEmpty() && unreadTotal <= 0) {
-            NotificationManagerCompat.from(context).cancel(BACKEND_CENTER_ID)
+        val manager = NotificationManagerCompat.from(context)
+        val oldIds = readActiveBackendIds(context)
+        val cleaned = entries
+            .filter { it.message.trim().isNotBlank() }
+            .take(20)
+
+        if (cleaned.isEmpty() || unreadTotal <= 0) {
+            oldIds.forEach { manager.cancel(it) }
+            manager.cancel(BACKEND_CENTER_ID)
+            writeActiveBackendIds(context, emptySet())
             return
         }
 
-        val title = if (unreadTotal > 0) {
-            context.getString(R.string.notif_backend_center_title_with_count, unreadTotal)
-        } else {
-            context.getString(R.string.notif_backend_center_title)
-        }
-        val text = cleaned.firstOrNull() ?: context.getString(R.string.notif_backend_center_empty)
-        val deepLink = runCatching {
-            val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
-            "${base.scheme}://${base.host}/load-more-notifications"
-        }.getOrDefault("h360://shortcut/pos")
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink), context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val pending = PendingIntent.getActivity(
-            context,
-            BACKEND_CENTER_ID,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val inbox = NotificationCompat.InboxStyle().also { style ->
-            cleaned.forEach { style.addLine(it) }
-            if (unreadTotal > cleaned.size) {
-                style.setSummaryText("+${unreadTotal - cleaned.size} autres")
+        val newIds = linkedSetOf<Int>()
+        cleaned.forEach { entry ->
+            val body = entry.message.trim()
+            if (body.isBlank()) return@forEach
+            val title = entry.title.trim().ifBlank { context.getString(R.string.notif_backend_center_title) }
+            val key = entry.key.ifBlank { "$title|$body" }
+            val id = BACKEND_ITEM_BASE_ID + (abs(key.hashCode()) % BACKEND_ITEM_SPAN)
+            val deepLink = entry.deepLink?.trim().orEmpty().ifBlank {
+                runCatching {
+                    val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
+                    "${base.scheme}://${base.host}/load-more-notifications"
+                }.getOrDefault("h360://shortcut/pos")
             }
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink), context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pending = PendingIntent.getActivity(
+                context,
+                id,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().setBigContentTitle(title).bigText(body))
+                .setAutoCancel(true)
+                .setOngoing(false)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pending)
+                .build()
+            manager.notify(id, notification)
+            newIds.add(id)
         }
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(inbox)
-            .setAutoCancel(false)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setSilent(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setContentIntent(pending)
-            .build()
 
-        NotificationManagerCompat.from(context).notify(BACKEND_CENTER_ID, notification)
+        oldIds.filterNot { newIds.contains(it) }.forEach { manager.cancel(it) }
+        manager.cancel(BACKEND_CENTER_ID)
+        writeActiveBackendIds(context, newIds)
     }
 
     private fun notify(context: Context, id: Int, title: String, text: String, deepLink: String) {
@@ -241,5 +256,23 @@ object H360NotificationDispatcher {
             prefs.edit().putLong(key, now).apply()
         }
         return throttled
+    }
+
+    private fun readActiveBackendIds(context: Context): Set<Int> {
+        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_BACKEND_ACTIVE_IDS, "")
+            .orEmpty()
+        if (raw.isBlank()) return emptySet()
+        return raw.split(",")
+            .mapNotNull { it.trim().toIntOrNull() }
+            .toSet()
+    }
+
+    private fun writeActiveBackendIds(context: Context, ids: Set<Int>) {
+        val serialized = ids.joinToString(",")
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_BACKEND_ACTIVE_IDS, serialized)
+            .apply()
     }
 }

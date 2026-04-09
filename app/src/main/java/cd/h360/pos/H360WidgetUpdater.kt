@@ -98,6 +98,13 @@ object H360WidgetUpdater {
         val name: String
     )
 
+    data class BackendNotificationEntry(
+        val key: String,
+        val title: String,
+        val message: String,
+        val deepLink: String?
+    )
+
     fun rememberRole(context: Context, role: String) {
         prefs(context).edit().putString(KEY_ROLE, role.ifBlank { "guest" }).apply()
     }
@@ -212,16 +219,36 @@ object H360WidgetUpdater {
             .apply()
     }
 
-    private fun readBackendNotificationMessages(context: Context): List<String> {
+    private fun readBackendNotificationEntries(context: Context): List<BackendNotificationEntry> {
         val raw = prefs(context).getString(KEY_BACKEND_NOTIFICATIONS_JSON, "").orEmpty()
         if (raw.isBlank()) return emptyList()
         return try {
             val arr = JSONArray(raw)
-            val out = mutableListOf<String>()
+            val out = mutableListOf<BackendNotificationEntry>()
             for (i in 0 until arr.length()) {
                 val obj = arr.optJSONObject(i) ?: continue
                 val msg = obj.optString("message").trim()
-                if (msg.isNotBlank()) out.add(msg)
+                if (msg.isBlank()) continue
+                val readAt = obj.optString("read_at").trim()
+                if (readAt.isNotBlank()) {
+                    continue
+                }
+                val title = obj.optString("title")
+                    .ifBlank { obj.optString("subject") }
+                    .trim()
+                    .ifBlank { "Notification backend" }
+                val deepLink = obj.optString("link").trim().ifBlank { null }
+                val key = obj.optString("id").trim().ifBlank {
+                    "${obj.optString("created_at").trim()}|$title|$msg"
+                }
+                out.add(
+                    BackendNotificationEntry(
+                        key = key,
+                        title = title,
+                        message = msg,
+                        deepLink = deepLink
+                    )
+                )
             }
             out
         } catch (_: Exception) {
@@ -466,7 +493,7 @@ object H360WidgetUpdater {
             H360NotificationDispatcher.updatePersistentBackendNotifications(
                 context = context,
                 unreadTotal = readBackendUnreadTotal(context),
-                messages = readBackendNotificationMessages(context)
+                entries = readBackendNotificationEntries(context)
             )
         } catch (e: Exception) {
             Log.e(TAG, "Backend center notification update failed", e)
@@ -706,7 +733,7 @@ object H360WidgetUpdater {
                 H360NotificationDispatcher.updatePersistentBackendNotifications(
                     context = context,
                     unreadTotal = unread,
-                    messages = readBackendNotificationMessages(context)
+                    entries = readBackendNotificationEntries(context)
                 )
                 return
             }
