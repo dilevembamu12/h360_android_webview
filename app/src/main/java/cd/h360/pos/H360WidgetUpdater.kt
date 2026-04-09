@@ -887,7 +887,12 @@ object H360WidgetUpdater {
                 sales.optString("trend_hint", "").ifBlank { null },
                 sales.optString("suggested_action", "").ifBlank { null }
             )
-            val seriesArray = sales.optJSONArray("series")
+            val hourlySeriesArray = sales.optJSONArray("hourly_series")
+            val seriesArray = if (hourlySeriesArray != null && hourlySeriesArray.length() > 1) {
+                hourlySeriesArray
+            } else {
+                sales.optJSONArray("series")
+            }
             if (seriesArray != null) {
                 val series = mutableListOf<Double>()
                 for (i in 0 until seriesArray.length()) {
