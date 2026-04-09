@@ -29,6 +29,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -72,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private val maintenanceCheckUrl = BuildConfig.MAINTENANCE_CHECK_URL
     private val kioskModeEnabled = BuildConfig.ENABLE_KIOSK_MODE
     private val appOrigin = Uri.parse(homeUrl).let { "${it.scheme}://${it.host}" }
+    private val fallbackOrigin = "https://fallback.h360.local"
     private val copilotUrl = "$appOrigin/h360-copilot/chat"
     private val offlineUrl = "$appOrigin/h360offline"
     private val newSaleUrl = "$appOrigin/sells/create"
@@ -320,7 +322,23 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val targetUri = request.url
+                val scheme = targetUri.scheme?.lowercase().orEmpty()
                 val host = targetUri.host?.lowercase().orEmpty()
+                val targetUrl = targetUri.toString()
+
+                if (scheme == "h360") {
+                    return handleH360ActionDeepLink(targetUri)
+                }
+
+                if (request.isForMainFrame && !isOnline() && !isOfflineAllowedUrl(targetUrl)) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        getString(R.string.offline_only_mode),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    view.loadUrl(offlineUrl)
+                    return true
+                }
 
                 if (host.isEmpty() || allowedHosts.contains(host)) {
                     return false
@@ -332,7 +350,18 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                showPageLoader(getString(R.string.page_loading_message))
+                super.onPageStarted(view, url, favicon)
+            }
+
+            override fun onPageCommitVisible(view: WebView?, url: String?) {
+                hidePageLoader()
+                super.onPageCommitVisible(view, url)
+            }
+
             override fun onPageFinished(view: WebView?, url: String?) {
+                hidePageLoader()
                 binding.swipeRefresh.isRefreshing = false
                 val online = isOnline()
                 binding.offlineBanner.visibility = if (online) View.GONE else View.VISIBLE
@@ -370,10 +399,15 @@ class MainActivity : AppCompatActivity() {
                 error: WebResourceError?
             ) {
                 if (request?.isForMainFrame == true) {
+                    hidePageLoader()
                     binding.offlineBanner.visibility = View.VISIBLE
                     H360WidgetUpdater.rememberOnline(this@MainActivity, false)
                     H360WidgetUpdater.rememberLastUpdate(this@MainActivity, nowStamp())
                     H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
+                    val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) error?.errorCode ?: -1 else -1
+                    val reason = error?.description?.toString().orEmpty()
+                    val failingUrl = request.url?.toString().orEmpty()
+                    loadHttpFallbackPage(code, reason, failingUrl)
                 }
                 super.onReceivedError(view, request, error)
             }
@@ -383,8 +417,15 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest?,
                 errorResponse: WebResourceResponse?
             ) {
-                if (request?.isForMainFrame == true && errorResponse?.statusCode == 503) {
-                    showMaintenanceOverlay()
+                if (request?.isForMainFrame == true) {
+                    hidePageLoader()
+                    val status = errorResponse?.statusCode ?: -1
+                    val reason = errorResponse?.reasonPhrase.orEmpty()
+                    val failingUrl = request.url?.toString().orEmpty()
+                    if (status == 503) {
+                        showMaintenanceOverlay()
+                    }
+                    loadHttpFallbackPage(status, reason, failingUrl)
                 }
                 super.onReceivedHttpError(view, request, errorResponse)
             }
@@ -398,6 +439,9 @@ class MainActivity : AppCompatActivity() {
             H360WidgetUpdater.rememberLastUpdate(this, nowStamp())
             H360WidgetUpdater.refreshAllWidgets(this)
             hideMaintenanceOverlay()
+            if (!isOfflineAllowedUrl(binding.webView.url.orEmpty())) {
+                binding.webView.loadUrl(offlineUrl)
+            }
             if (forceReload) {
                 loadTargetUrl()
             }
@@ -432,6 +476,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadTargetUrl() {
         val target = DeepLinkResolver.resolve(intent, homeUrl, allowedHosts)
+        if (!isOnline() && !isOfflineAllowedUrl(target)) {
+            binding.webView.loadUrl(offlineUrl)
+            return
+        }
         binding.webView.loadUrl(target)
     }
 
@@ -449,6 +497,17 @@ class MainActivity : AppCompatActivity() {
     private fun hideMaintenanceOverlay() {
         binding.maintenanceContainer.visibility = View.GONE
         binding.swipeRefresh.isEnabled = true
+    }
+
+    private fun showPageLoader(text: String) {
+        val loaderText = binding.pageLoaderContainer.findViewById<TextView>(R.id.pageLoaderText)
+        loaderText.text = text
+        if (binding.maintenanceContainer.visibility == View.VISIBLE) return
+        binding.pageLoaderContainer.visibility = View.VISIBLE
+    }
+
+    private fun hidePageLoader() {
+        binding.pageLoaderContainer.visibility = View.GONE
     }
 
     private fun isOnline(): Boolean {
@@ -728,6 +787,91 @@ class MainActivity : AppCompatActivity() {
 
     private fun nowStamp(): String {
         return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+    }
+
+    private fun handleH360ActionDeepLink(uri: Uri): Boolean {
+        val host = uri.host?.lowercase().orEmpty()
+        val path = uri.path?.lowercase().orEmpty()
+        if (host != "action") {
+            return false
+        }
+        when {
+            path.contains("retry") -> {
+                checkMaintenanceAndLoad(forceReload = true)
+                return true
+            }
+            path.contains("offline") -> {
+                binding.webView.loadUrl(offlineUrl)
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun isOfflineAllowedUrl(url: String): Boolean {
+        if (url.isBlank()) return false
+        val lower = url.lowercase(Locale.US)
+        return lower.contains("/h360offline")
+            || lower.startsWith("h360://shortcut/offline")
+            || lower.startsWith("h360://action/offline")
+            || lower.startsWith("about:blank")
+            || lower.startsWith(fallbackOrigin.lowercase(Locale.US))
+    }
+
+    private fun loadHttpFallbackPage(statusCode: Int, reason: String, failingUrl: String) {
+        val title = if (statusCode > 0) "Erreur HTTP $statusCode" else getString(R.string.web_error_title)
+        val message = reason.ifBlank { getString(R.string.web_error_message) }
+        val safeUrl = escapeHtml(failingUrl.ifBlank { "-" })
+        val safeTitle = escapeHtml(title)
+        val safeMessage = escapeHtml(message)
+        val html = """
+            <!doctype html>
+            <html lang="fr">
+            <head>
+              <meta charset="utf-8"/>
+              <meta name="viewport" content="width=device-width,initial-scale=1"/>
+              <title>$safeTitle</title>
+              <style>
+                body{margin:0;font-family:Arial,sans-serif;background:#0b1e3a;color:#eef3ff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+                .card{max-width:640px;background:#132a4f;border:1px solid #24487d;border-radius:14px;padding:22px}
+                h1{margin:0 0 10px;font-size:22px}
+                p{margin:8px 0;line-height:1.5}
+                .url{font-size:12px;opacity:.85;word-break:break-all}
+                .btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+                .btn{padding:10px 14px;border-radius:10px;text-decoration:none;color:#fff;font-weight:700}
+                .retry{background:#2e7cf6}
+                .offline{background:#1fbf8e}
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <h1>$safeTitle</h1>
+                <p>$safeMessage</p>
+                <p class="url">$safeUrl</p>
+                <div class="btns">
+                  <a class="btn retry" href="h360://action/retry">Reessayer</a>
+                  <a class="btn offline" href="h360://action/offline">Ouvrir mode offline</a>
+                </div>
+              </div>
+            </body>
+            </html>
+        """.trimIndent()
+        binding.webView.loadDataWithBaseURL(
+            fallbackOrigin,
+            html,
+            "text/html",
+            "UTF-8",
+            null
+        )
+    }
+
+    private fun escapeHtml(input: String): String {
+        return input
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;")
     }
 }
 

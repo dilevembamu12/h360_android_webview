@@ -6,6 +6,10 @@
     <string name="maintenance_title">Maintenance en cours</string>
     <string name="maintenance_message">Le service est momentanement indisponible. Reessayez dans un instant.</string>
     <string name="retry">Reessayer</string>
+    <string name="page_loading_message">Chargement en cours...</string>
+    <string name="offline_only_mode">Pas de connexion. Seul le service offline est accessible.</string>
+    <string name="web_error_title">Erreur de chargement</string>
+    <string name="web_error_message">La page n a pas pu etre chargee correctement.</string>
     <string name="action_print_invoice">Imprimer facture</string>
     <string name="action_export_pdf">Exporter en PDF</string>
     <string name="action_share_pdf">Partager PDF</string>
