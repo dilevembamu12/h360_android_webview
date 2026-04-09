@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.pdf.PdfDocument
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -43,6 +44,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 import android.widget.Toast
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
@@ -355,6 +357,7 @@ class MainActivity : AppCompatActivity() {
                         H360WidgetUpdater.refreshFromRemoteIfDue(this@MainActivity, force = true)
                     }
                     applyOfflineUiTuning(view, url)
+                    syncToolbarThemeFromWeb(view)
                 }
                 H360WidgetUpdater.refreshAllWidgets(this@MainActivity)
                 super.onPageFinished(view, url)
@@ -503,6 +506,85 @@ class MainActivity : AppCompatActivity() {
             })();
         """.trimIndent()
         view.evaluateJavascript(script, null)
+    }
+
+    private fun syncToolbarThemeFromWeb(view: WebView?) {
+        if (view == null) return
+        val script = """
+            (function() {
+                try {
+                    var header = document.querySelector('.h360-main-header');
+                    var body = document.body;
+                    var headerBg = header ? window.getComputedStyle(header).backgroundColor : '';
+                    var bodyBg = body ? window.getComputedStyle(body).backgroundColor : '';
+                    return JSON.stringify({
+                        headerBg: String(headerBg || '').trim(),
+                        bodyBg: String(bodyBg || '').trim()
+                    });
+                } catch (e) {
+                    return JSON.stringify({ headerBg: '', bodyBg: '' });
+                }
+            })();
+        """.trimIndent()
+        view.evaluateJavascript(script) { raw ->
+            runOnUiThread {
+                applyToolbarThemeFromWebResult(raw)
+            }
+        }
+    }
+
+    private fun applyToolbarThemeFromWebResult(rawResult: String?) {
+        val fallback = ContextCompat.getColor(this, R.color.h360_primary)
+        val parsed = runCatching {
+            val jsonString = decodeJsResult(rawResult)
+            val obj = JSONObject(jsonString)
+            val headerBg = obj.optString("headerBg").trim()
+            val bodyBg = obj.optString("bodyBg").trim()
+            parseCssColor(headerBg) ?: parseCssColor(bodyBg) ?: fallback
+        }.getOrDefault(fallback)
+
+        binding.toolbar.setBackgroundColor(parsed)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = parsed
+        }
+
+        val textColor = if (isDarkColor(parsed)) Color.WHITE else Color.BLACK
+        binding.toolbar.setTitleTextColor(textColor)
+        binding.toolbar.setSubtitleTextColor(textColor)
+        binding.toolbar.navigationIcon?.setTint(textColor)
+        binding.toolbar.overflowIcon?.setTint(textColor)
+    }
+
+    private fun decodeJsResult(raw: String?): String {
+        if (raw.isNullOrBlank()) return "{}"
+        var text = raw.trim()
+        if (text == "null" || text == "undefined") return "{}"
+        if (text.length >= 2 && text.first() == '"' && text.last() == '"') {
+            text = text.substring(1, text.length - 1)
+        }
+        return text
+            .replace("\\\\", "\\")
+            .replace("\\\"", "\"")
+            .replace("\\n", "")
+            .replace("\\t", "")
+    }
+
+    private fun parseCssColor(input: String?): Int? {
+        val value = input?.trim().orEmpty()
+        if (value.isBlank() || value.equals("transparent", ignoreCase = true)) return null
+        return runCatching { Color.parseColor(value) }.getOrElse {
+            val rgbRegex = Regex("""rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)""", RegexOption.IGNORE_CASE)
+            val m = rgbRegex.find(value) ?: return null
+            val r = m.groupValues.getOrNull(1)?.toIntOrNull() ?: return null
+            val g = m.groupValues.getOrNull(2)?.toIntOrNull() ?: return null
+            val b = m.groupValues.getOrNull(3)?.toIntOrNull() ?: return null
+            Color.rgb(r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
+        }
+    }
+
+    private fun isDarkColor(color: Int): Boolean {
+        val luminance = (0.299 * Color.red(color)) + (0.587 * Color.green(color)) + (0.114 * Color.blue(color))
+        return luminance < 160
     }
 
     override fun onDestroy() {
