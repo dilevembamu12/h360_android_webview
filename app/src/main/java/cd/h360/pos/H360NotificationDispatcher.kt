@@ -117,10 +117,7 @@ object H360NotificationDispatcher {
         val safeMessage = message?.trim().orEmpty().ifBlank {
             context.getString(R.string.notif_advice_h_insufficient_text)
         }
-        val deepLink = runCatching {
-            val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
-            "${base.scheme}://${base.host}/h360-copilot/usage-history"
-        }.getOrDefault("h360://shortcut/copilot")
+        val deepLink = "h360://action/buy-h"
 
         notify(
             context = context,

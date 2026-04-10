@@ -76,6 +76,10 @@ class MainActivity : AppCompatActivity() {
     private val fallbackOrigin = "https://fallback.h360.local"
     private val copilotUrl = "$appOrigin/h360-copilot/chat"
     private val offlineUrl = "$appOrigin/h360offline"
+    private val hPurchaseUrlPrimary = "$appOrigin/h360wallet/deposits/create"
+    private val hPurchaseUrlFallback1 = "$appOrigin/h360wallet/deposits"
+    private val hPurchaseUrlFallback2 = "$appOrigin/h360wallet"
+    private val hPurchaseUrlFallback3 = "$appOrigin/h360-copilot/usage-history"
     private val newSaleUrl = "$appOrigin/sells/create"
     private val posUrl = "$appOrigin/pos/create"
 
@@ -804,6 +808,10 @@ class MainActivity : AppCompatActivity() {
                 binding.webView.loadUrl(offlineUrl)
                 return true
             }
+            path.contains("buy-h") -> {
+                openHPurchasePage()
+                return true
+            }
         }
         return false
     }
@@ -872,6 +880,17 @@ class MainActivity : AppCompatActivity() {
             .replace(">", "&gt;")
             .replace("\"", "&quot;")
             .replace("'", "&#39;")
+    }
+
+    private fun openHPurchasePage() {
+        val candidates = listOf(
+            hPurchaseUrlPrimary,
+            hPurchaseUrlFallback1,
+            hPurchaseUrlFallback2,
+            hPurchaseUrlFallback3
+        )
+        val target = candidates.firstOrNull { it.isNotBlank() } ?: hPurchaseUrlFallback3
+        binding.webView.loadUrl(target)
     }
 }
 
