@@ -25,6 +25,7 @@ object H360NotificationDispatcher {
     private const val ADVICE_THROTTLE_MS = 6 * 60 * 60 * 1000L
     private const val ADVICE_H_INSUFFICIENT_THROTTLE_MS = 2 * 60 * 60 * 1000L
     private const val KEY_DAILY_ADVICE_HASH = "daily_advice_hash"
+    private const val DASHBOARD_URL = "https://stack.git.h360.cd/home"
 
     fun notifyOfflinePending(context: Context, pending: Int) {
         if (pending < 5) return
@@ -95,10 +96,7 @@ object H360NotificationDispatcher {
         val unchanged = newHash == lastHash
         if (unchanged && isThrottled(context, "daily_advice", ADVICE_THROTTLE_MS)) return
 
-        val deepLink = runCatching {
-            val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
-            "${base.scheme}://${base.host}/home"
-        }.getOrDefault("h360://shortcut/pos")
+        val deepLink = DASHBOARD_URL
 
         notify(
             context = context,
@@ -134,10 +132,7 @@ object H360NotificationDispatcher {
         if (safeMessage.isBlank()) return
         if (!canSend(context)) return
         val safeDeepLink = deepLink?.trim().orEmpty().ifBlank {
-            runCatching {
-                val base = Uri.parse(BuildConfig.WEBVIEW_BASE_URL)
-                "${base.scheme}://${base.host}/home"
-            }.getOrDefault("h360://shortcut/pos")
+            DASHBOARD_URL
         }
         val id = notificationId ?: ((System.currentTimeMillis() % 100000).toInt() + 2000)
         notify(

@@ -44,6 +44,7 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
         private const val CATEGORY_SALES = "sales"
         private const val CATEGORY_STOCK = "stock"
         private const val CATEGORY_HEALTH = "health"
+        private const val DASHBOARD_URL = "https://stack.git.h360.cd/home"
 
         fun refreshAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -248,11 +249,9 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
         }
 
         private fun openInsightsPage(context: Context): PendingIntent {
-            val base = BuildConfig.WEBVIEW_BASE_URL.trim().ifBlank { "https://stack.git.h360.cd" }
-            val normalized = if (base.endsWith("/")) base.dropLast(1) else base
             val intent = Intent(
                 Intent.ACTION_VIEW,
-                Uri.parse("$normalized/home"),
+                Uri.parse(DASHBOARD_URL),
                 context,
                 MainActivity::class.java
             ).apply {
