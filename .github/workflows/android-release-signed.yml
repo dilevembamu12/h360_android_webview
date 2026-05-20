@@ -52,9 +52,6 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > /tmp/h360-release.keystore
           ls -lh /tmp/h360-release.keystore
 
-      - name: Ensure Gradle wrapper is executable
-        run: chmod +x ./gradlew
-
       - name: Build signed release bundle (AAB) + APK
         env:
           ANDROID_SIGNING_KEYSTORE_PATH: /tmp/h360-release.keystore
@@ -62,7 +59,7 @@ jobs:
           ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
           ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
         run: |
-          ./gradlew --no-daemon --stacktrace clean :app:bundleRelease :app:assembleRelease
+          gradle --no-daemon --stacktrace clean :app:bundleRelease :app:assembleRelease
 
       - name: Upload signed release AAB
         uses: actions/upload-artifact@v4
