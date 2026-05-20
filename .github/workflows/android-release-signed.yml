@@ -6,6 +6,8 @@ on:
 jobs:
   build-signed-release:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - name: Checkout
@@ -49,6 +51,9 @@ jobs:
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > /tmp/h360-release.keystore
           ls -lh /tmp/h360-release.keystore
+
+      - name: Ensure Gradle wrapper is executable
+        run: chmod +x ./gradlew
 
       - name: Build signed release bundle (AAB) + APK
         env:
