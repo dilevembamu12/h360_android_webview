@@ -44,7 +44,7 @@ class H360InsightsCardsWidgetProvider : AppWidgetProvider() {
         private const val CATEGORY_SALES = "sales"
         private const val CATEGORY_STOCK = "stock"
         private const val CATEGORY_HEALTH = "health"
-        private const val DASHBOARD_URL = "https://stack.git.h360.cd/home"
+        private const val DASHBOARD_URL = "https://pos.h360.cd/home"
 
         fun refreshAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)

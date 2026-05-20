@@ -25,7 +25,7 @@ object H360NotificationDispatcher {
     private const val ADVICE_THROTTLE_MS = 6 * 60 * 60 * 1000L
     private const val ADVICE_H_INSUFFICIENT_THROTTLE_MS = 2 * 60 * 60 * 1000L
     private const val KEY_DAILY_ADVICE_HASH = "daily_advice_hash"
-    private const val DASHBOARD_URL = "https://stack.git.h360.cd/home"
+    private const val DASHBOARD_URL = "https://pos.h360.cd/home"
 
     fun notifyOfflinePending(context: Context, pending: Int) {
         if (pending < 5) return

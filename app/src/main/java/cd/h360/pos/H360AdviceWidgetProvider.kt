@@ -33,7 +33,7 @@ class H360AdviceWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_REFRESH = "cd.h360.pos.ACTION_ADVICE_REFRESH"
-        private const val DASHBOARD_URL = "https://stack.git.h360.cd/home"
+        private const val DASHBOARD_URL = "https://pos.h360.cd/home"
 
         fun refreshAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)

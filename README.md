@@ -5,7 +5,7 @@ Application Android WebView pour accéder à H360 POS sans taper l’URL dans un
 ## Fonctionnalités incluses
 - Ouverture directe de `https://pos.h360.cd/login`
 - Splash screen brandé H360
-- Deep links Android (`https://pos.h360.cd/...`, `https://stack.git.h360.cd/...`)
+- Deep links Android (`https://pos.h360.cd/...`, `https://pos.h360.cd/...`)
 - Overlay maintenance si backend retourne `503`
 - Mode kiosk optionnel (flag build)
 - Demande permission notifications (Android 13+)
@@ -39,7 +39,7 @@ Clé:
 
 Exemples:
 - `https://pos.h360.cd/login`
-- `https://stack.git.h360.cd/login`
+- `https://pos.h360.cd/login`
 
 ## Branding Splash
 Le logo splash est ici:
