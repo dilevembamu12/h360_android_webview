@@ -8,7 +8,7 @@ echo ============================================
 echo.
 
 if "%~1"=="" (
-  set /p KEYSTORE_PATH=Enter keystore path (.jks/.keystore): 
+  set /p KEYSTORE_PATH=Enter keystore path [jks/keystore]: 
 ) else (
   set "KEYSTORE_PATH=%~1"
 )
@@ -34,4 +34,3 @@ echo Next step:
 echo   Run 02_configure_github_secrets.bat
 echo.
 exit /b 0
-
